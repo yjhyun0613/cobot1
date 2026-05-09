@@ -90,7 +90,7 @@ def main(args=None):
         set_robot_mode(ROBOT_MODE_AUTONOMOUS)
         time.sleep(1.0) 
 
-        print("\n🔄 대기 모드: /dsr01/progress_status 토픽에서 '02' 신호를 기다립니다...")
+        print("\n🔄 대기 모드: /dsr01/progress_status 토픽에서 '02' 신호를기다립니다...")
 
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=0.1)
