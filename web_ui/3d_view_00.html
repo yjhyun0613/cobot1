@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로봇 실시간 궤적 모니터링</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>Robot Live Trajectory</h2>
+        <p>Firebase에서 실시간 좌표를 받아 궤적을 그립니다.</p>
+        <div id="coords">X: 0, Y: 0, Z: 0</div>
+    </div>
+
+    <!-- Three.js 및 Firebase 라이브러리 로드 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        // 1. 🔥 Firebase 설정 (본인의 정보로 교체하세요)
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 2.  scène, camera, renderer 설정
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 그리드(바닥)와 축 표시
+        const grid = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+        grid.rotation.x = Math.PI / 2; // ROS 좌표계처럼 Z가 위로 가게 설정
+        scene.add(grid);
+        scene.add(new THREE.AxesHelper(100));
+
+        // 3. 궤적을 그릴 선(Line) 설정
+        const MAX_POINTS = 5000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(MAX_POINTS * 3); // 3개씩(x,y,z) 한 점
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        let count = 0;
+
+        // 4. 🔥 Firebase 실시간 데이터 구독
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && count < MAX_POINTS) {
+                // 좌표 업데이트 (사용자님 로봇 좌표계 mm 적용)
+                positions[count * 3] = data.x;
+                positions[count * 3 + 1] = data.y;
+                positions[count * 3 + 2] = data.z;
+                
+                count++;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.geometry.setDrawRange(0, count);
+
+                // 화면 텍스트 업데이트
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)}, Y: ${data.y.toFixed(1)}, Z: ${data.z.toFixed(1)}`;
+            }
+        });
+
+        // 카메라 위치 (로봇 작업 영역 근처)
+        camera.position.set(800, 400, 600);
+        camera.lookAt(450, 0, 200);
+
+        // 5. 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+            // 마우스 대신 천천히 회전시켜서 입체감 주기
+            scene.rotation.z += 0.002;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 창 크기 조절 대응
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

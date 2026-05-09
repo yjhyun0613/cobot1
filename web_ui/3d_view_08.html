@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Real-time Monitor (Digital Twin)</title>
+    <!-- Plotly 라이브러리 로드 -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #ffffff; }
+        #info { position: absolute; top: 20px; left: 20px; color: #333; font-family: 'Open Sans', verdana, arial, sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 14px; color: #0000FF; font-weight: bold; margin-top: 8px; margin-bottom: 15px; }
+        
+        #clearBtn {
+            pointer-events: auto;
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        #clearBtn:hover { background-color: #555; }
+        #clearBtn:active { background-color: #111; }
+        
+        #plotDiv { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2 style="margin:0; font-size: 18px;">Live Trajectory Inspection</h2>
+        <div id="coords">Waiting for Robot Data...</div>
+        <button id="clearBtn">Clear Real-time Path</button>
+    </div>
+    
+    <div id="plotDiv"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue, get, child } from 'firebase/database';
+
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // ==========================================
+        // 2. Plotly 3D 그래프 초기 세팅 (2개의 궤적)
+        // ==========================================
+        const initialData = [
+            {
+                // [Trace 0] 기준 궤적 (Baseline)
+                x: [], y: [], z: [],
+                type: 'scatter3d',
+                mode: 'lines',
+                line: { 
+                    color: 'rgba(80, 80, 80, 0.9)',
+                    width: 4,
+                    // 💡 점선을 더 촘촘하게 (dash: [실선길이, 공백길이])
+                    dash: '100px, 100px' 
+                },
+                name: 'Baseline'
+            },
+            {
+                // [Trace 1] 실제 궤적 (Real-time)
+                x: [], y: [], z: [],
+                type: 'scatter3d',
+                mode: 'lines',
+                line: { color: 'blue', width: 6 },
+                name: 'Actual Path'
+            }
+        ];
+
+        const layout = {
+            margin: { l: 0, r: 0, b: 0, t: 0 },
+            scene: {
+                // 💡 비율을 1:1:1로 고정하여 왜곡 방지
+                aspectmode: 'cube', 
+                xaxis: { title: 'X (mm)', showgrid: true },
+                yaxis: { title: 'Y (mm)', showgrid: true },
+                zaxis: { title: 'Z (mm)', showgrid: true }
+            },
+            showlegend: true,
+            legend: { x: 0.8, y: 0.9 }
+        };
+
+        Plotly.newPlot('plotDiv', initialData, layout, {responsive: true});
+
+        // 3. 파이어베이스에서 기준 궤적(Baseline) 불러오기
+        const dbRef = ref(db);
+        get(child(dbRef, 'robot/dsr01/baseline')).then((snapshot) => {
+            if (snapshot.exists()) {
+                const baseData = snapshot.val();
+                Plotly.update('plotDiv', {
+                    x: [baseData.x], 
+                    y: [baseData.y], 
+                    z: [baseData.z]
+                }, {}, [0]);
+                console.log("✅ 기준 궤적(Baseline) 로드 완료!");
+            }
+        });
+
+        // 4. 초기화 로직
+        function clearTrajectory() {
+            Plotly.update('plotDiv', {x: [[]], y: [[]], z: [[]]}, {}, [1]);
+            document.getElementById('coords').innerText = "Trajectory Cleared. Waiting...";
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', clearTrajectory);
+
+        const statusRef = ref(db, 'robot/dsr01/status');
+        onValue(statusRef, (snapshot) => {
+            const status = snapshot.val();
+            if (status && status.is_scanning === true) {
+                clearTrajectory();
+            }
+        });
+
+        // 5. 📡 실시간 데이터 스트리밍
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (Math.abs(data.x) < 1 && Math.abs(data.y) < 1 && Math.abs(data.z) < 1) return;
+
+                Plotly.extendTraces('plotDiv', {
+                    x: [[data.x]],
+                    y: [[data.y]],
+                    z: [[data.z]]
+                }, [1], 15000);
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)} Y: ${data.y.toFixed(1)} Z: ${data.z.toFixed(1)}`;
+            }
+        });
+    </script>
+</body>
+</html>

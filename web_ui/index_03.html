@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Doosan M0609 Web Interface</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
+        h1 { text-align: center; color: #1a5276; margin-bottom: 30px; font-weight: bold; }
+        
+        /* 3단 레이아웃 구성 */
+        .container { display: flex; gap: 20px; justify-content: center; align-items: flex-start; max-width: 1200px; margin: 0 auto; }
+        .panel { background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; flex: 1; min-height: 600px; }
+        
+        h2 { font-size: 1.2em; color: #333; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;}
+        
+        /* 입력 폼 스타일 */
+        .input-group { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .input-group label { font-size: 0.9em; color: #555; }
+        .input-group input { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align: right; }
+        
+        .section-title { font-weight: bold; font-size: 0.9em; margin: 20px 0 10px 0; color: #333; }
+        
+        /* 버튼 스타일 */
+        button { width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; transition: opacity 0.2s; }
+        button:hover { opacity: 0.8; }
+        .btn-movej { background-color: #2e86c1; }
+        .btn-movel { background-color: #cb4335; }
+        .btn-copy { background-color: #7f8c8d; }
+        .btn-green { background-color: #27ae60; flex: 1; margin-top:0;}
+        .btn-gray { background-color: #7f8c8d; flex: 1; margin-top:0;}
+        .btn-home { background-color: #17a589; margin-top: 10px;}
+        .btn-sync { background-color: #f1c40f; color: #333; margin-top: 10px;}
+        .btn-row { display: flex; gap: 10px; margin-bottom: 10px; }
+
+        /* 상태 및 로그 영역 */
+        .status-box, .log-box { border: 1px dashed #3498db; background-color: #ebf5fb; padding: 10px; border-radius: 4px; margin-top: 15px; font-size: 0.9em; }
+        .log-box { background-color: #fff; height: 250px; overflow-y: auto; font-family: monospace; font-size: 0.8em; white-space: pre-wrap; }
+        .highlight { font-weight: bold; color: #c0392b; }
+        .info-text { color: #2980b9; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Doosan M0609 Web Interface</h1>
+    <div class="container">
+        <!-- 1. Joint Control Panel -->
+        <div class="panel">
+            <h2>Joint Control (MoveJ)</h2>
+            <div id="joint-inputs">
+                <div class="input-group"><label>J1 (deg):</label><input type="number" id="cmd-j1" value="0.000"></div>
+                <div class="input-group"><label>J2 (deg):</label><input type="number" id="cmd-j2" value="0.000"></div>
+                <div class="input-group"><label>J3 (deg):</label><input type="number" id="cmd-j3" value="90.000"></div>
+                <div class="input-group"><label>J4 (deg):</label><input type="number" id="cmd-j4" value="0.000"></div>
+                <div class="input-group"><label>J5 (deg):</label><input type="number" id="cmd-j5" value="90.000"></div>
+                <div class="input-group"><label>J6 (deg):</label><input type="number" id="cmd-j6" value="0.000"></div>
+            </div>
+            <div class="section-title">Speed / Acc: (0 ~ 100)</div>
+            <div class="input-group"><label>Velocity:</label><input type="number" id="cmd-j-vel" value="60"></div>
+            <div class="input-group"><label>Acceleration:</label><input type="number" id="cmd-j-acc" value="60"></div>
+            <button class="btn-movej" onclick="sendCommand('movej')">MOVE(J)</button>
+            <button class="btn-copy" onclick="syncCoordinates('joint')">COPY (현재 조인트 동기화)</button>
+        </div>
+
+        <!-- 2. Cartesian Control Panel -->
+        <div class="panel">
+            <h2>Cartesian Control (MoveL)</h2>
+            <div id="cartesian-inputs">
+                <div class="input-group"><label>X (mm):</label><input type="number" id="cmd-x" value="300.000"></div>
+                <div class="input-group"><label>Y (mm):</label><input type="number" id="cmd-y" value="0.000"></div>
+                <div class="input-group"><label>Z (mm):</label><input type="number" id="cmd-z" value="400.000"></div>
+                <div class="input-group"><label>A (deg):</label><input type="number" id="cmd-a" value="90.000"></div>
+                <div class="input-group"><label>B (deg):</label><input type="number" id="cmd-b" value="180.000"></div>
+                <div class="input-group"><label>C (deg):</label><input type="number" id="cmd-c" value="90.000"></div>
+            </div>
+            <div class="section-title">Speed / Acc: (0 ~ 100)</div>
+            <div class="input-group"><label>Velocity:</label><input type="number" id="cmd-l-vel" value="60"></div>
+            <div class="input-group"><label>Acceleration:</label><input type="number" id="cmd-l-acc" value="60"></div>
+            <button class="btn-movel" onclick="sendCommand('movel')">MOVE(L)</button>
+            <button class="btn-copy" onclick="syncCoordinates('cartesian')">COPY (현재 좌표 동기화)</button>
+        </div>
+
+        <!-- 3. 상태 및 도구 Panel -->
+        <div class="panel">
+            <h2>상태 및 도구</h2>
+            <div class="btn-row">
+                <button class="btn-green" onclick="sendCommand('check_tcp')">TCP 확인</button>
+                <button class="btn-gray" onclick="sendCommand('check_tool')">Tool 확인</button>
+            </div>
+            <button class="btn-home" onclick="sendCommand('home')">HOME</button>
+            <button class="btn-sync" onclick="syncCoordinates('all')">전체 현재 좌표 확인</button>
+
+            <div class="status-box">
+                <p>현재 명령/로봇 상태:</p>
+                <p id="ui-status" class="highlight">대기 중</p>
+                <p>현재 TCP 설정: <br><span class="info-text">GripperDA_mh</span></p>
+                <p>현재 Tool 설정: <br><span class="info-text">Toolweight</span></p>
+            </div>
+
+            <div class="log-box" id="robot-logs">
+                <!-- 실시간 로그가 여기에 출력됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCY5tdlAhNhhlxCwdXHOTOrnyGWGFz6hc",
+            authDomain: "rokey-d-2-4c32a.firebaseapp.com",
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "rokey-d-2-4c32a",
+            storageBucket: "rokey-d-2-4c32a.firebasestorage.app",
+            messagingSenderId: "97777845306",
+            appId: "1:97777845306:web:6a3122b918c1f3651c2103",
+            measurementId: "G-3L4G46B6H8"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        let currentRobotState = {}; // 로봇의 현재 상태를 저장할 객체
+
+        // 1. 로봇 상태 수신 (모니터링)
+        db.ref('m0609/status').on('value', (snapshot) => {
+            currentRobotState = snapshot.val() || {};
+            
+            // UI 상태 업데이트
+            if (currentRobotState.system_status) {
+                document.getElementById('ui-status').innerText = currentRobotState.system_status;
+            }
+
+            // 로그 업데이트
+            if (currentRobotState.latest_log) {
+                const logBox = document.getElementById('robot-logs');
+                const timeStr = new Date().toLocaleTimeString('en-GB'); // HH:MM:SS
+                
+                // 중복 로그 방지를 위해 내용 확인 후 추가
+                const lastLogLine = logBox.innerHTML.trim().split('\n').pop();
+                if (!lastLogLine.includes(currentRobotState.latest_log)) {
+                    logBox.innerHTML += `[${timeStr}] ${currentRobotState.latest_log}\n`;
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+            }
+        });
+
+        // 2. 입력 폼에 현재 로봇 좌표 동기화 (COPY 기능)
+        function syncCoordinates(type) {
+            if (!currentRobotState.joint || !currentRobotState.pose) {
+                alert("아직 로봇으로부터 좌표 데이터를 수신하지 못했습니다.");
+                return;
+            }
+
+            if (type === 'joint' || type === 'all') {
+                document.getElementById('cmd-j1').value = currentRobotState.joint[0].toFixed(3);
+                document.getElementById('cmd-j2').value = currentRobotState.joint[1].toFixed(3);
+                document.getElementById('cmd-j3').value = currentRobotState.joint[2].toFixed(3);
+                document.getElementById('cmd-j4').value = currentRobotState.joint[3].toFixed(3);
+                document.getElementById('cmd-j5').value = currentRobotState.joint[4].toFixed(3);
+                document.getElementById('cmd-j6').value = currentRobotState.joint[5].toFixed(3);
+            }
+
+            if (type === 'cartesian' || type === 'all') {
+                document.getElementById('cmd-x').value = currentRobotState.pose[0].toFixed(3);
+                document.getElementById('cmd-y').value = currentRobotState.pose[1].toFixed(3);
+                document.getElementById('cmd-z').value = currentRobotState.pose[2].toFixed(3);
+                document.getElementById('cmd-a').value = currentRobotState.pose[3].toFixed(3);
+                document.getElementById('cmd-b').value = currentRobotState.pose[4].toFixed(3);
+                document.getElementById('cmd-c').value = currentRobotState.pose[5].toFixed(3);
+            }
+            document.getElementById('ui-status').innerText = "좌표 동기화 완료";
+            document.getElementById('ui-status').style.color = "red";
+        }
+
+        // 3. 파이썬 노드로 명령 전송 (직접 제어)
+        function sendCommand(cmdType) {
+            const commandData = {
+                action: cmdType, // 파이썬 코드가 action 키워드로 읽도록 수정됨
+                timestamp: Date.now()
+            };
+
+            if (cmdType === 'movej') {
+                commandData.pos = [
+                    parseFloat(document.getElementById('cmd-j1').value),
+                    parseFloat(document.getElementById('cmd-j2').value),
+                    parseFloat(document.getElementById('cmd-j3').value),
+                    parseFloat(document.getElementById('cmd-j4').value),
+                    parseFloat(document.getElementById('cmd-j5').value),
+                    parseFloat(document.getElementById('cmd-j6').value)
+                ];
+                commandData.vel = parseFloat(document.getElementById('cmd-j-vel').value);
+                commandData.acc = parseFloat(document.getElementById('cmd-j-acc').value);
+            } 
+            else if (cmdType === 'movel') {
+                commandData.pos = [
+                    parseFloat(document.getElementById('cmd-x').value),
+                    parseFloat(document.getElementById('cmd-y').value),
+                    parseFloat(document.getElementById('cmd-z').value),
+                    parseFloat(document.getElementById('cmd-a').value),
+                    parseFloat(document.getElementById('cmd-b').value),
+                    parseFloat(document.getElementById('cmd-c').value)
+                ];
+                commandData.vel = parseFloat(document.getElementById('cmd-l-vel').value);
+                commandData.acc = parseFloat(document.getElementById('cmd-l-acc').value);
+            }
+
+            // Firebase의 m0609/command 경로에 데이터 쓰기 (파이썬이 직접 읽어감)
+            db.ref('m0609/command').set(commandData)
+                .then(() => {
+                    console.log(cmdType + " 명령 전송 완료");
+                    document.getElementById('ui-status').innerText = `명령 전송됨: ${cmdType.toUpperCase()}`;
+                    document.getElementById('ui-status').style.color = "blue";
+                })
+                .catch((error) => console.error("명령 전송 실패: ", error));
+        }
+    </script>
+</body>
+</html>

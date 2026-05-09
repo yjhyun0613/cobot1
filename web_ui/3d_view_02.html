@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로봇 실시간 궤적 - Z축 상향 모드</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; }
+        #info { position: absolute; top: 10px; left: 10px; color: #aaa; font-family: sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 1.1em; color: #00ff00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Robot Live Scanned Trajectory</h3>
+        <div id="coords">로봇 데이터 대기 중...</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const scene = new THREE.Scene();
+        
+        // 💡 [핵심 수정] 카메라의 Up 벡터를 Z축(0, 0, 1)으로 설정
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.up.set(0, 0, 1); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        
+        // 그리드 설정 (XY 평면에 배치)
+        const grid = new THREE.GridHelper(1000, 20, 0x333333, 0x222222);
+        grid.rotation.x = Math.PI / 2; 
+        scene.add(grid);
+
+        // 궤적 설정
+        const MAX_POINTS = 10000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(MAX_POINTS * 3);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const material = new THREE.LineBasicMaterial({ color: 0x228B22, linewidth: 3 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        let count = 0;
+        const box = new THREE.Box3(); 
+
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && count < MAX_POINTS) {
+                // 원점 노이즈 필터링
+                if (Math.abs(data.x) < 1 && Math.abs(data.y) < 1 && Math.abs(data.z) < 1) return;
+
+                positions[count * 3] = data.x;
+                positions[count * 3 + 1] = data.y;
+                positions[count * 3 + 2] = data.z;
+                
+                count++;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.geometry.setDrawRange(0, count);
+
+                const currentVec = new THREE.Vector3(data.x, data.y, data.z);
+                box.expandByPoint(currentVec);
+
+                // 첫 데이터 수신 시 카메라를 반구 근처로 밀착
+                if (count === 1) {
+                    camera.position.set(data.x + 150, data.y + 150, data.z + 150);
+                    controls.target.set(data.x, data.y, data.z);
+                }
+
+                // 데이터 중심을 계속 추적하여 화면 중앙 유지
+                if (count % 5 === 0) {
+                    const center = new THREE.Vector3();
+                    box.getCenter(center);
+                    controls.target.lerp(center, 0.1); // 부드러운 이동
+                }
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)}, Y: ${data.y.toFixed(1)}, Z: ${data.z.toFixed(1)}`;
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

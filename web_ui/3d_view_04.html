@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Real-time Monitor (Plotly Style)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #fdfdfd; }
+        /* 💡 포인터 이벤트를 추가하여 버튼 클릭이 가능하도록 수정 */
+        #info { position: absolute; top: 20px; left: 20px; color: #333; font-family: 'Open Sans', verdana, arial, sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 14px; color: #228B22; font-weight: bold; margin-top: 8px; margin-bottom: 15px; }
+        canvas { background-color: #000; }
+        
+        /* 💡 초기화 버튼 스타일 (Plotly 느낌) */
+        #clearBtn {
+            pointer-events: auto; /* 버튼은 클릭 가능해야 함 */
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        #clearBtn:hover { background-color: #555; }
+        #clearBtn:active { background-color: #111; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2 style="margin:0; font-size: 18px;">Live Trajectory: Scan Dome</h2>
+        <div id="coords">Waiting for Robot Data...</div>
+        <!-- 💡 수동 초기화 버튼 추가 -->
+        <button id="clearBtn">Clear Trajectory</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.up.set(0, 0, 1); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        const grid = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+        grid.rotation.x = Math.PI / 2; 
+        scene.add(grid);
+
+        const MAX_POINTS = 20000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(MAX_POINTS * 3);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const material = new THREE.LineBasicMaterial({ color: 0x00FF00, linewidth: 4 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        let count = 0;
+        const boundingBox = new THREE.Box3(); 
+
+        // 💡 화면 지우기(초기화) 함수 생성
+        function clearTrajectory() {
+            count = 0;
+            line.geometry.setDrawRange(0, count); // 그려지는 구간을 0으로 만들어 선을 숨김
+            boundingBox.makeEmpty();              // 줌인을 위한 박스 영역도 초기화
+            document.getElementById('coords').innerText = "Trajectory Cleared. Waiting...";
+        }
+
+        // 💡 1. 버튼 클릭 시 수동 초기화
+        document.getElementById('clearBtn').addEventListener('click', clearTrajectory);
+
+        // 💡 2. 파이어베이스 상태(status)를 감지하여 자동 초기화
+        const statusRef = ref(db, 'robot/dsr01/status');
+        onValue(statusRef, (snapshot) => {
+            const status = snapshot.val();
+            // 파이썬에서 is_scanning을 True로 보냈을 때 (= 새 동작이 시작될 때)
+            if (status && status.is_scanning === true) {
+                console.log("새로운 스캔 시작 감지! 기존 궤적을 지웁니다.");
+                clearTrajectory();
+            }
+        });
+
+        // 데이터 수신 및 실시간 렌더링
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && count < MAX_POINTS) {
+                if (Math.abs(data.x) < 1 && Math.abs(data.y) < 1 && Math.abs(data.z) < 1) return;
+
+                positions[count * 3] = data.x;
+                positions[count * 3 + 1] = data.y;
+                positions[count * 3 + 2] = data.z;
+                
+                count++;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.geometry.setDrawRange(0, count);
+
+                const currentPos = new THREE.Vector3(data.x, data.y, data.z);
+                boundingBox.expandByPoint(currentPos);
+
+                if (count === 1) {
+                    camera.position.set(data.x + 200, data.y - 200, data.z + 200);
+                    controls.target.set(data.x, data.y, data.z);
+                }
+
+                if (count % 5 === 0) {
+                    const center = new THREE.Vector3();
+                    boundingBox.getCenter(center);
+                    controls.target.lerp(center, 0.2); 
+                }
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)} Y: ${data.y.toFixed(1)} Z: ${data.z.toFixed(1)}`;
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

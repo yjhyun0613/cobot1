@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로봇 실시간 궤적 모니터링 - 고정 뷰</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; z-index: 10; }
+        #coords { font-size: 1.2em; color: #00ff00; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>Robot Live Monitoring (Fixed View)</h2>
+        <p>작업 영역(mm) 집중 모드</p>
+        <div id="coords">X: 0, Y: 0, Z: 0</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        // 1. 🔥 Firebase 설정 (URL 확인 필수)
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 2. Scene 설정
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 마우스로 직접 조절 가능한 컨트롤 추가 (자동 회전 없음)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 그리드 및 축 (작업 영역 450, 0, 200 근처로 그리드 이동)
+        const grid = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+        grid.rotation.x = Math.PI / 2;
+        scene.add(grid);
+        scene.add(new THREE.AxesHelper(100));
+
+        // 3. 궤적 설정
+        const MAX_POINTS = 10000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(MAX_POINTS * 3);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        let count = 0;
+        let isFirstPoint = true;
+
+        // 4. 🔥 실시간 데이터 구독 및 원점 선 제거 로직
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && count < MAX_POINTS) {
+                // 💡 [핵심 수정] 원점(0,0,0) 노이즈 데이터는 무시
+                if (data.x === 0 && data.y === 0 && data.z === 0) return;
+
+                positions[count * 3] = data.x;
+                positions[count * 3 + 1] = data.y;
+                positions[count * 3 + 2] = data.z;
+                
+                count++;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.geometry.setDrawRange(0, count);
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)}, Y: ${data.y.toFixed(1)}, Z: ${data.z.toFixed(1)}`;
+            }
+        });
+
+        // 5. 💡 [핵심 수정] 카메라 뷰를 로봇 작업 영역(450, 0, 200)에 고정 및 확대
+        // 위치를 조금 더 가깝게 설정하여 확대 효과를 줌
+        camera.position.set(700, 300, 500); 
+        controls.target.set(450, 0, 200); // 카메라가 항상 450, 0, 200을 바라봄
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // scene.rotation.z += 0.002;  // 💡 [수정] 자동 회전 코드 삭제
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

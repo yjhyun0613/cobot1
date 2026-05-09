@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Real-time Monitor (Plotly Streaming)</title>
+    <!-- 💡 Plotly 라이브러리 로드 -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #ffffff; }
+        #info { position: absolute; top: 20px; left: 20px; color: #333; font-family: 'Open Sans', verdana, arial, sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 14px; color: #0000FF; font-weight: bold; margin-top: 8px; margin-bottom: 15px; }
+        
+        #clearBtn {
+            pointer-events: auto;
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        #clearBtn:hover { background-color: #555; }
+        #clearBtn:active { background-color: #111; }
+        
+        /* Plotly가 그려질 전체 화면 캔버스 */
+        #plotDiv { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2 style="margin:0; font-size: 18px;">Live Trajectory: Plotly Streaming</h2>
+        <div id="coords">Waiting for Robot Data...</div>
+        <button id="clearBtn">Clear Trajectory</button>
+    </div>
+    
+    <!-- 💡 3D 그래프가 들어갈 공간 -->
+    <div id="plotDiv"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // ==========================================
+        // 1. Plotly 3D 그래프 초기 세팅
+        // ==========================================
+        const initialData = [{
+            x: [], y: [], z: [],
+            type: 'scatter3d',
+            mode: 'lines',
+            line: { color: 'blue', width: 4 } // 파란색 선
+        }];
+
+        const layout = {
+            margin: { l: 0, r: 0, b: 0, t: 0 }, // 여백 없이 꽉 차게
+            scene: {
+                aspectmode: 'data', // 💡 1:1:1 비율을 유지하여 반구가 찌그러지지 않게 함
+                xaxis: { title: 'X (mm)', showgrid: true },
+                yaxis: { title: 'Y (mm)', showgrid: true },
+                zaxis: { title: 'Z (mm)', showgrid: true }
+            }
+        };
+
+        // 빈 그래프를 먼저 화면에 띄웁니다.
+        Plotly.newPlot('plotDiv', initialData, layout, {responsive: true});
+
+        // ==========================================
+        // 2. 초기화(화면 지우기) 로직
+        // ==========================================
+        function clearTrajectory() {
+            Plotly.update('plotDiv', {x: [[]], y: [[]], z: [[]]});
+            document.getElementById('coords').innerText = "Trajectory Cleared. Waiting...";
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', clearTrajectory);
+
+        const statusRef = ref(db, 'robot/dsr01/status');
+        onValue(statusRef, (snapshot) => {
+            const status = snapshot.val();
+            if (status && status.is_scanning === true) {
+                console.log("새로운 스캔 시작! 화면을 지웁니다.");
+                clearTrajectory();
+            }
+        });
+
+        // ==========================================
+        // 3. 📡 실시간 데이터 스트리밍 (Plotly extendTraces)
+        // ==========================================
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // 원점 노이즈 무시
+                if (Math.abs(data.x) < 1 && Math.abs(data.y) < 1 && Math.abs(data.z) < 1) return;
+
+                // 💡 핵심: Plotly의 'extendTraces'를 사용해 들어오는 좌표를 선 끝에 실시간으로 이어 붙임
+                Plotly.extendTraces('plotDiv', {
+                    x: [[data.x]],
+                    y: [[data.y]],
+                    z: [[data.z]]
+                }, [0], 20000); // 최대 20000 포인트까지 유지
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)} Y: ${data.y.toFixed(1)} Z: ${data.z.toFixed(1)}`;
+            }
+        });
+    </script>
+</body>
+</html>

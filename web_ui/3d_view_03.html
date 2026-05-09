@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Real-time Monitor (Plotly Style)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #fdfdfd; /* Plotly 특유의 밝은 배경 또는 완전 블랙 중 선택 가능 */ }
+        #info { position: absolute; top: 20px; left: 20px; color: #333; font-family: 'Open Sans', verdana, arial, sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 14px; color: #228B22; font-weight: bold; margin-top: 8px; }
+        canvas { background-color: #000; /* 데이터가 돋보이게 블랙 배경 */ }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2 style="margin:0; font-size: 18px;">Live Trajectory: Scan Dome</h2>
+        <div id="coords">Waiting for Robot Data...</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        // 1. 🔥 Firebase 설정 (사용자님의 URL 유지)
+        const firebaseConfig = {
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 2. Scene & Camera (Z-up 설정)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.up.set(0, 0, 1); // 💡 Z축을 위로 설정
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 3. Plotly 느낌의 그리드 설정 (XY 평면)
+        const grid = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+        grid.rotation.x = Math.PI / 2; 
+        scene.add(grid);
+
+        // 4. 실시간 궤적 선 설정
+        const MAX_POINTS = 20000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(MAX_POINTS * 3);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0x00FF00, // Plotly 스타일의 선명한 녹색
+            linewidth: 4    // 선 두께 (브라우저에 따라 1로 고정될 수 있음)
+        });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        let count = 0;
+        const boundingBox = new THREE.Box3(); 
+
+        // 5. 📡 데이터 수신 및 실시간 렌더링
+        const poseRef = ref(db, 'robot/dsr01/current_pose');
+        onValue(poseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && count < MAX_POINTS) {
+                // 💡 [원점 선 제거] 0,0,0 좌표 및 쓰레기 값 필터링[cite: 3, 5]
+                if (Math.abs(data.x) < 1 && Math.abs(data.y) < 1 && Math.abs(data.z) < 1) return;
+
+                positions[count * 3] = data.x;
+                positions[count * 3 + 1] = data.y;
+                positions[count * 3 + 2] = data.z;
+                
+                count++;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.geometry.setDrawRange(0, count);
+
+                // 💡 [자동 확대] 실시간으로 데이터 중심점 계산
+                const currentPos = new THREE.Vector3(data.x, data.y, data.z);
+                boundingBox.expandByPoint(currentPos);
+
+                if (count === 1) {
+                    // 첫 점이 찍히면 카메라 근처로 이동
+                    camera.position.set(data.x + 200, data.y - 200, data.z + 200);
+                    controls.target.set(data.x, data.y, data.z);
+                }
+
+                // 5점마다 카메라 중심점을 데이터의 중심으로 부드럽게 이동[cite: 3]
+                if (count % 5 === 0) {
+                    const center = new THREE.Vector3();
+                    boundingBox.getCenter(center);
+                    controls.target.lerp(center, 0.2); 
+                }
+
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)} Y: ${data.y.toFixed(1)} Z: ${data.z.toFixed(1)}`;
+            }
+        });
+
+        // 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 브라우저 리사이즈 대응
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

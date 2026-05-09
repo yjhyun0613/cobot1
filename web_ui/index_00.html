@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>로봇 모니터링 대시보드</title>
+    <style>
+        /* UI 스타일을 꾸며줍니다 */
+        body { font-family: sans-serif; padding: 20px; }
+        h1 { color: navy; }
+        #monitor-box { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            width: 300px;
+            background-color: #f4f4f4;
+        }
+        #job-count { 
+            font-size: 2.5em; 
+            font-weight: bold; 
+            color: green; 
+        }
+    </style>
+</head>
+<body>
+    <h1>두산 M0609 공정 모니터링</h1>
+
+    <div id="monitor-box">
+        <p>완료된 작업 수:</p>
+        <span id="job-count">...로딩 중...</span>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // 2. 1단계 4번에서 복사한 firebaseConfig 붙여넣기
+        const firebaseConfig = {
+        apiKey: "AIzaSyCCY5tdlAhNhhlxCwdXHOTOrnyGWGFz6hc",
+        authDomain: "rokey-d-2-4c32a.firebaseapp.com",
+        databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "rokey-d-2-4c32a",
+        storageBucket: "rokey-d-2-4c32a.firebasestorage.app",
+        messagingSenderId: "97777845306",
+        appId: "1:97777845306:web:6a3122b918c1f3651c2103",
+        measurementId: "G-3L4G46B6H8"
+        };
+        // Firebase 앱 초기화
+        firebase.initializeApp(firebaseConfig);
+
+        // 3. Realtime Database 참조 가져오기
+        const database = firebase.database();
+        
+        // 2단계 Python 코드에서 'robot_status/completed_jobs' 경로에 저장했음
+        const jobCountRef = database.ref('robot_status/completed_jobs'); 
+
+        // 4. 데이터 실시간 수신 (핵심!)
+        // 'on' 리스너는 DB 데이터가 변경될 때마다 *자동으로* 호출됩니다.
+        jobCountRef.on('value', (snapshot) => {
+            const jobCount = snapshot.val(); // DB에서 값 가져오기
+            console.log("새 데이터 수신:", jobCount);
+
+            // 5. HTML 요소 업데이트
+            document.getElementById('job-count').innerText = jobCount || 0;
+        });
+    </script>
+</body>
+</html>
