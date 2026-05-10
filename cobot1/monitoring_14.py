@@ -47,13 +47,13 @@ class TrajectoryMonitorNode(Node):
         self.trajectory_points = []
         self.distances = []
         
-        self.ERROR_THRESHOLD = 5.0  
-        self.FAIL_RATE_LIMIT = 10.0 
+        self.ERROR_THRESHOLD = 2.0  
+        self.FAIL_RATE_LIMIT = 5.0 
         
         if not os.path.exists(IMAGE_DIR): os.makedirs(IMAGE_DIR)
 
         try:
-            cred = credentials.Certificate('/home/yoon/cobot_ws/src/cobot1/rokey-d-2-4c32a-firebase-adminsdk-fbsvc-1bc6c65e35.json')
+            cred = credentials.Certificate('/home/yoon/cobot_ws/src/cobot1/rokey-d-2-4c32a-firebase-adminsdk-fbsvc-7f5d874f48.json')
             if not firebase_admin._apps:
                 firebase_admin.initialize_app(cred, {
                     'storageBucket': 'rokey-d-2-4c32a.firebasestorage.app',
