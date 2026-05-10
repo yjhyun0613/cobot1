@@ -31,9 +31,9 @@ def forward_kinematics(q):
     T45 = get_transform_matrix(0, 0, 0, -1.571, 0, 0) @ get_transform_matrix(0, 0, 0, 0, 0, q[4])
     T56 = get_transform_matrix(0, -0.121, 0, 1.571, 0, 0) @ get_transform_matrix(0, 0, 0, 0, 0, q[5])
     
-    # 💡 그리퍼(228.6mm) + 툴(35mm) = 263.6mm (0.2636m) 반영
+    # 💡 그리퍼(228.6mm) + 툴(30mm) = 263.6mm (0.2586m) 반영
     # Z축으로 일직선이며 각도 꺾임이 없으므로 Z축 이동값만 적용
-    TOOL_LENGTH_Z = 0.2636 
+    TOOL_LENGTH_Z = 0.2586 
     T_tool = get_transform_matrix(0, 0, TOOL_LENGTH_Z, 0, 0, 0)
     
     # 최종 TCP(Tool Center Point) 위치 계산

@@ -84,7 +84,7 @@ def generate_scan_drl(center, radius, total_layers, tool_length):
     
     drl_code = 'set_tool("Tool Weight")\nset_tcp("GripperDA_v1")\nset_singularity_handling(1)\n\n'
     
-    drl_code += 'stiff = [3000, 3000, 50, 300, 300, 300]\ntask_compliance_ctrl(stiff, 0)\n'
+    drl_code += 'stiff = [300, 300, 50, 300, 300, 300]\ntask_compliance_ctrl(stiff, 0)\n'
     drl_code += 'set_desired_force([0,0,-10,0,0,0], [0,0,1,0,0,0], 0)\nsleep(0.5)\n\n'
 
     for i in range(1, total_layers + 1):

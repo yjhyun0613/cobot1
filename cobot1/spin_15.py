@@ -15,9 +15,9 @@ ROBOT_MODEL = "m0609"
 ROBOT_TOOL  = "Tool Weight"
 ROBOT_TCP   = "GripperDA_v1"
 
-RADIUS       = 50.0            
-TOTAL_LAYERS = 5    
-CENTER       = np.array([420.15, 75.45, 57.0]) # [X, Y, Z]
+RADIUS       = 49.0            
+TOTAL_LAYERS = 5
+CENTER       = np.array([425.15, 74.76, 57.0]) # [X, Y, Z]
 
 SAFE_Z_HEIGHT = 200.0  # 대기 위치의 안전 Z 높이
 
@@ -80,7 +80,7 @@ def generate_dome_scan_drl(center, radius, total_layers):
 
     # 2. DRL 코드 뼈대 생성
     drl_code = "set_singularity_handling(1)\n"
-    drl_code += "stiff = [100, 100, 100, 150, 50, 150]\n"
+    drl_code += "stiff = [3000, 3000, 300, 300, 300, 300]\n"
     drl_code += "task_compliance_ctrl(stiff)\n\n"
 
     # 3. 층별 지그재그 회전 로직 생성
