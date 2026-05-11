@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Real-time Monitor (3D + Error Scope)</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f8f9fa; display: flex; flex-direction: column; height: 100vh; }
+        #info { position: absolute; top: 15px; left: 20px; color: #333; font-family: 'Open Sans', sans-serif; z-index: 10; pointer-events: none; }
+        #coords { font-size: 14px; color: #0000FF; font-weight: bold; margin-top: 5px; }
+        #errorVal { font-size: 16px; color: #FF0000; font-weight: bold; margin-top: 5px; }
+        
+        /* 화면을 위(3D) 60%, 아래(2D) 40%로 분할 */
+        #plot3D { width: 100vw; height: 65vh; border-bottom: 2px solid #ddd; }
+        #plot2D { width: 100vw; height: 35vh; background-color: #fff; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2 style="margin:0; font-size: 18px;">Live Inspection Dashboard</h2>
+        <div id="coords">Waiting for Robot Data...</div>
+        <div id="errorVal">Error: 0.0 mm</div>
+    </div>
+    
+    <div id="plot3D"></div>
+    <div id="plot2D"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        const firebaseConfig = { databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 1. 3D 궤적 그래프 세팅
+        const data3D = [{ x: [], y: [], z: [], type: 'scatter3d', mode: 'lines+markers', line: { color: 'blue', width: 4 }, marker: { size: 2 }, name: 'Actual Path' }];
+        const layout3D = { margin: { l: 0, r: 0, b: 0, t: 0 }, scene: { aspectmode: 'data' }};
+        Plotly.newPlot('plot3D', data3D, layout3D, {responsive: true});
+
+        // 2. 2D 오실로스코프 그래프 세팅
+        const data2D = [{ y: [], type: 'scatter', mode: 'lines+markers', line: { color: 'red', width: 2, shape: 'spline' }, fill: 'tozeroy', name: 'Jitter (mm)' }];
+        const layout2D = { 
+            margin: { l: 50, r: 20, b: 30, t: 30 },
+            title: { text: "Real-time Path Jitter (Error)", font: { size: 14 } },
+            yaxis: { title: "Error (mm)", range: [0, 5] }, // 오차 범위 0~5mm 고정
+            xaxis: { showticklabels: false } // X축 시간은 흘러가므로 레이블 숨김
+        };
+        Plotly.newPlot('plot2D', data2D, layout2D, {responsive: true});
+
+        let counter = 0;
+
+        // 화면 초기화 함수
+        function clearDashboard() {
+            Plotly.update('plot3D', {x: [[]], y: [[]], z: [[]]}, {}, [0]);
+            Plotly.update('plot2D', {y: [[]]}, {}, [0]);
+            counter = 0;
+        }
+
+        onValue(ref(db, 'robot/dsr01/status'), (snapshot) => {
+            const status = snapshot.val();
+            if (status && status.is_scanning === true) clearDashboard();
+        });
+
+        // 데이터 수신 및 동시 렌더링
+        onValue(ref(db, 'robot/dsr01/current_pose'), (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.x) {
+                // 텍스트 업데이트
+                document.getElementById('coords').innerText = `X: ${data.x.toFixed(1)} Y: ${data.y.toFixed(1)} Z: ${data.z.toFixed(1)}`;
+                
+                const err = data.error || 0.0;
+                const errElement = document.getElementById('errorVal');
+                errElement.innerText = `Error: ${err.toFixed(2)} mm`;
+                errElement.style.color = err > 3.0 ? "red" : "green"; // 3mm 넘으면 빨간색 경고
+
+                // 3D 점 추가 (계속 누적)
+                Plotly.extendTraces('plot3D', { x: [[data.x]], y: [[data.y]], z: [[data.z]] }, [0]);
+                
+                // 2D 오차 추가 (최근 50개 점만 남기고 왼쪽으로 흘러감 = 오실로스코프 효과)
+                Plotly.extendTraces('plot2D', { y: [[err]] }, [0]);
+            }
+        });
+    </script>
+</body>
+</html>

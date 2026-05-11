@@ -84,7 +84,7 @@ class FirebaseBridgeNode(Node):
             current_pos = forward_kinematics(q)
             
             current_time = time.time()
-            if current_time - self.last_fb_time > 0.1:
+            if current_time - self.last_fb_time > 0.02:  # 💡 0.02초마다 업데이트 (50Hz)
                 self.db_pose_ref.set({
                     'x': float(current_pos[0]),
                     'y': float(current_pos[1]),

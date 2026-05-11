@@ -15,13 +15,14 @@ ROBOT_MODEL = "m0609"
 ROBOT_TOOL  = "Tool Weight"
 ROBOT_TCP   = "GripperDA_v1"
 
-RADIUS       = 49.5            
-TOTAL_LAYERS = 6   
-CENTER       = np.array([421.15, 72.76, 53.5]) 
+RADIUS       = 48.5               
+TOTAL_LAYERS = 10
+# CENTER       = np.array([422.15, 72.76, 47.0])
+CENTER       = np.array([422.5, 72.76, 54.0]) 
 
-SAFE_Z_HEIGHT = 200.0  
-LIFT_HEIGHT   = 15.0   
-MAX_RADIUS_EXPANSION = 8.5  # 💡 맨 아래층 쪼임 방지를 위해 9.0으로 확실히 증가
+SAFE_Z_HEIGHT = 200.0
+LIFT_HEIGHT   = 10.0   
+MAX_RADIUS_EXPANSION = 9.5  # 💡 맨 아래층 쪼임 방지를 위해 9.0으로 확실히 증가
 
 # =================================================================
 # [2] 수학 및 기하학 보조 함수 
@@ -51,7 +52,7 @@ def make_continuous(base, target):
 def get_pure_blended_orientation(target_pos, center):
     pure_normal = -normalize(target_pos - center)
     down_z_axis = np.array([0.0, 0.0, -1.0])
-    z_axis_final = normalize((down_z_axis * 3.0) + (pure_normal * 1.0))
+    z_axis_final = normalize((down_z_axis * 2.5) + (pure_normal * 1.0))
 
     up = np.array([0.0, 1.0, 0.0]) if abs(z_axis_final[2]) > 0.95 else np.array([0.0, 0.0, 1.0])
     x_axis = normalize(np.cross(up, z_axis_final))
@@ -103,11 +104,11 @@ def generate_layer_waypoints(center, radius, total_layers):
         tr_z = make_continuous(vr_z, tr_z_raw)
 
         drl_code = "set_singularity_handling(1)\n"
-        drl_code += "stiff = [10, 3000, 3000, 300, 10, 300]\n"
+        drl_code += "stiff = [1, 3000, 3000, 300, 1, 3]\n"
         drl_code += "task_compliance_ctrl(stiff)\n"
         drl_code += f"p_via = posx({via_xyz[0]:.2f}, {via_xyz[1]:.2f}, {via_xyz[2]:.2f}, {vr_x:.2f}, {vr_y:.2f}, {vr_z:.2f})\n"
         drl_code += f"p_tgt = posx({tgt_xyz[0]:.2f}, {tgt_xyz[1]:.2f}, {tgt_xyz[2]:.2f}, {tr_x:.2f}, {tr_y:.2f}, {tr_z:.2f})\n"
-        drl_code += f"movec(p_via, p_tgt, v=50, a=100, angle=360.0, ori=2)\n"
+        drl_code += f"movec(p_via, p_tgt, v=10, a=20, angle=360.0, ori=2)\n"
         drl_code += "release_compliance_ctrl()\n"
 
         p_lift_in = [start_xyz[0], start_xyz[1], start_xyz[2] + LIFT_HEIGHT, sr_x, sr_y, sr_z] if i > 1 else None
