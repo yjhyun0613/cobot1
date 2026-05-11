@@ -1,4 +1,5 @@
 # last_work_final.py
+# PASS 좌표 수정
 import sys
 import time
 
@@ -30,7 +31,7 @@ ROBOT_TCP = "GripperDA_v1"
 ON, OFF = 1, 0
 
 PROGRESS_TOPIC = f"/{ROBOT_ID}/progress_status"
-INSPECTION_RESULT_TOPIC = "/inspection_result"
+INSPECTION_RESULT_TOPIC = f"/{ROBOT_ID}/inspection_result"
 
 START_SIGNAL = "03"
 PASS_SIGNAL = "PASS"
@@ -87,16 +88,14 @@ class M0609SortingTestNode(Node):
         # ====================================================
         # 좌표 / 속도 설정
         # ====================================================
-        self.home_joint = [0, 0, 90, 0, 90, 0]
-        self.tool_pick_joint = [4.8, 22.26, 79.62, 0.07, 48.39, 180.11]
-        self.pass_pos_joint = [34.1, 54.9, 27.64, -0.94, 74.69, 33.05]
-        self.fail_pos_joint = [55.42, 34.74, 73.28, 2.26, 74.69, 33.05]
-        
-        self.inspection_above_posx = [433.68, 73.82, 184.71, 3, -179.12, -6.38]
-        self.inspection_place_posx = [433.68, 73.82, 84.71, 3, -179.12, -6.38]
-        self.tool_safe_posx = [685.15, 68.43, 135.82, 5.56, 150.27, 180.61]
-        self.tool_place_posx = [741.64, 73.1, 36.78, 5.59, 149.36, 180.75]
-
+        self.home_joint = [0, 0, 90, 0, 90, 0] # 수정 완료
+        self.tool_pick_joint = [7.2, 28.08, 75.94, -6.06, 48.37, 9.12] 
+        self.pass_pos_joint = [35.75, 60.97, 15.71, 8.41, 66.92, 66.99] # 수정 완료
+        self.fail_pos_joint = [61.53, 31.85, 69.11, 1.16, 78.58, -14.88] # 수정 완료
+        self.inspection_above_posx = [426.5, 135.72, 57.88, 104.72, -177.01, 105.27] # 수정 완료
+        self.inspection_place_posx = [426.5, 135.72, 7.88, 104.72, -177.01, 105.27] # 수정 완료      
+        self.tool_safe_posx = [708.82, 72.51, 99.76, 178.28, -151.92, 177.01]
+        self.tool_place_posx = [744.15, 72.82, 33.01, 178.69, -152.04, 177.4]
         self.get_logger().info("✅ M0609 PASS/FAIL 분배 노드 준비 완료")
 
     def initialize_robot(self):

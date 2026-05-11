@@ -21,7 +21,7 @@ CENTER       = np.array([421.15, 72.76, 53.5])
 
 SAFE_Z_HEIGHT = 200.0  
 LIFT_HEIGHT   = 15.0   
-MAX_RADIUS_EXPANSION = 8  # 💡 맨 아래층 쪼임 방지를 위해 9.0으로 확실히 증가
+MAX_RADIUS_EXPANSION = 8.5  # 💡 맨 아래층 쪼임 방지를 위해 9.0으로 확실히 증가
 
 # =================================================================
 # [2] 수학 및 기하학 보조 함수 
@@ -51,7 +51,7 @@ def make_continuous(base, target):
 def get_pure_blended_orientation(target_pos, center):
     pure_normal = -normalize(target_pos - center)
     down_z_axis = np.array([0.0, 0.0, -1.0])
-    z_axis_final = normalize((down_z_axis * 2.5) + (pure_normal * 1.0))
+    z_axis_final = normalize((down_z_axis * 3.0) + (pure_normal * 1.0))
 
     up = np.array([0.0, 1.0, 0.0]) if abs(z_axis_final[2]) > 0.95 else np.array([0.0, 0.0, 1.0])
     x_axis = normalize(np.cross(up, z_axis_final))
