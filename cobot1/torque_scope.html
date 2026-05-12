@@ -2,69 +2,83 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>6-Axis Torque Oscilloscope</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <title>실시간 토크 오실로스코프</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <style>
-        body { margin: 0; padding: 10px; background-color: #111; color: white; font-family: sans-serif; }
-        #scope { width: 100vw; height: 95vh; }
-        .header { position: absolute; top: 10px; left: 20px; z-index: 10; }
+        body { background-color: #111; color: white; font-family: sans-serif; text-align: center; }
+        #graph { width: 95%; height: 75vh; margin: 0 auto; }
+        #status { font-size: 18px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2 style="margin:0; color: #00ff00;">🦾 M0609 Joint Torque Scope</h2>
-        <p style="margin:5px 0; font-size: 12px; color: #aaa;">Real-time 6-Channel Monitoring (Unit: Nm)</p>
-    </div>
-    <div id="scope"></div>
+    <h2>🚀 M0609 실시간 토크 오실로스코프</h2>
+    <div id="status">🔴 대기 중... (파이썬 데이터를 기다립니다)</div>
+    <div id="graph"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const firebaseConfig = { databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app" };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        const joints = ['J1', 'J2', 'J3', 'J4', 'J5', 'J6'];
-        const colors = ['#FF4136', '#FF851B', '#FFDC00', '#2ECC40', '#0074D9', '#B10DC9'];
-        
-        // 💡 x축(0)과 y축(0)을 모두 명시하여 초기화 (그래프가 멈추는 버그 해결)
-        const data = joints.map((name, i) => ({
-            x: [0], y: [0], type: 'scatter', mode: 'lines',
-            line: { color: colors[i], width: 2 },
-            name: name, xaxis: 'x', yaxis: `y${i + 1}`
-        }));
-
-        const layout = {
-            grid: { rows: 6, columns: 1, pattern: 'independent' },
-            paper_bgcolor: '#111', plot_bgcolor: '#222', showlegend: false,
-            margin: { l: 50, r: 20, b: 20, t: 30 },
+    <script>
+        // 💡 [수정 필요] 파이어베이스 콘솔 -> 프로젝트 설정에서 웹 앱의 설정값을 복사해서 넣어주세요!
+        const firebaseConfig = {
+            apiKey: "여기에_API_KEY를_넣어주세요",
+            authDomain: "rokey-d-2-4c32a.firebaseapp.com",
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "rokey-d-2-4c32a",
+            storageBucket: "rokey-d-2-4c32a.appspot.com",
+            messagingSenderId: "여기에_SENDER_ID를_넣어주세요",
+            appId: "여기에_APP_ID를_넣어주세요"
         };
 
-        joints.forEach((_, i) => {
-            const idx = i + 1;
-            layout[`yaxis${idx}`] = { title: { text: `J${idx}`, font: { color: colors[i] } }, tickfont: { color: '#888' }, gridcolor: '#333' };
-            layout[`xaxis${idx}`] = { showticklabels: false, gridcolor: '#333' };
-        });
+        // 파이어베이스 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        Plotly.newPlot('scope', data, layout, { responsive: true });
+        // 화면에 남겨둘 과거 데이터 개수 (약 5~6초 분량)
+        const maxDataPoints = 100; 
+        
+        // 6개 관절 선(Trace) 만들기
+        const traces = [];
+        const colors = ['#FF4136', '#FF851B', '#FFDC00', '#2ECC40', '#0074D9', '#B10DC9'];
+        
+        for (let i = 0; i < 6; i++) {
+            traces.push({
+                x: [], y: [],
+                name: 'Joint ' + (i + 1),
+                mode: 'lines',
+                line: { color: colors[i], width: 2 }
+            });
+        }
 
-        let counter = 0;
+        const layout = {
+            plot_bgcolor: '#222', paper_bgcolor: '#111', font: { color: 'white' },
+            xaxis: { title: 'Time', showgrid: true, gridcolor: '#333' },
+            yaxis: { title: 'Torque (Nm)', showgrid: true, gridcolor: '#333' },
+            margin: { l: 40, r: 40, t: 20, b: 40 }
+        };
 
-        onValue(ref(db, 'robot/dsr01/torques'), (snapshot) => {
-            const val = snapshot.val();
-            if (val && val.j1 !== undefined) {
-                counter++;
-                // 💡 브라우저 F12를 눌러서 'Console' 탭을 보면 수신 상태를 확인할 수 있습니다.
-                console.log(`[${counter}] 데이터 수신 성공: J1=${val.j1}`); 
+        Plotly.newPlot('graph', traces, layout);
+        let firstData = true;
+
+        // 💡 파이어베이스 데이터가 변경될 때마다(실시간) 콜백 실행
+        db.ref('robot/dsr01/torques').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (firstData) {
+                    document.getElementById('status').innerText = "🟢 데이터 수신 및 렌더링 중!";
+                    firstData = false;
+                }
+
+                // 타임스탬프를 시간 객체로 변환
+                const time = new Date(data.timestamp);
                 
+                // 6가닥의 선에 각각 새로운 X(시간), Y(토크) 데이터를 꽂아넣기
                 const update = {
-                    x: [[counter], [counter], [counter], [counter], [counter], [counter]],
-                    y: [[val.j1], [val.j2], [val.j3], [val.j4], [val.j5], [val.j6]]
+                    x: [[time], [time], [time], [time], [time], [time]],
+                    y: [[data.j1], [data.j2], [data.j3], [data.j4], [data.j5], [data.j6]]
                 };
-                
-                // 최근 100개 데이터 유지
-                Plotly.extendTraces('scope', update, [0, 1, 2, 3, 4, 5], 100);
+
+                // Plotly를 이용해 그래프를 부드럽게 연장하고, maxDataPoints를 넘어가면 과거 데이터 삭제
+                Plotly.extendTraces('graph', update, [0, 1, 2, 3, 4, 5], maxDataPoints);
             }
         });
     </script>
