@@ -333,7 +333,7 @@ class MasterInspectionNode(Node):
 
         # 검사 완전 종료 신호 전송
         self.pub_check_state.publish(Bool(data=False))
-        self.movej_smart("스캔 완료 후 홈 복귀", [0.0, 0.0, 90.0, 0.0, 90.0, 0.0], v=100, a=100)
+        # self.movej_smart("스캔 완료 후 홈 복귀", [0.0, 0.0, 90.0, 0.0, 90.0, 0.0], v=100, a=100)
         return True
 
     # ============================================================
@@ -344,6 +344,7 @@ class MasterInspectionNode(Node):
         target_pos = self.pass_pos_joint if result == "PASS" else self.fail_pos_joint
         
         tasks = [
+            ("movej", "홈으로 복귀", self.home_joint),
             ("movej", "도구 반납 접근", self.tool_safe_joint),
             ("movel", "도구 최종 좌표 이동", self.tool_place_posx),
             ("gripper", "도구 내려놓기", "open"),
