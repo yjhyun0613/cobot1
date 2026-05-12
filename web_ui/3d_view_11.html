@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>M0609 라이브 3D 스캐너</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        /* 💡 밝고 세련된 화이트/라이트 테마로 CSS 수정 */
+        body { 
+            background-color: #f8f9fa; /* 밝은 회색빛 배경 */
+            margin: 0; 
+            overflow: hidden; 
+            color: #333; /* 짙은 회색 글씨 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 더 현대적인 글꼴 */
+        }
+        #title { 
+            position: absolute; 
+            top: 15px; 
+            left: 20px; 
+            z-index: 10; 
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #2c3e50; /* 제목 색상 */
+            background-color: rgba(255, 255, 255, 0.8); /* 제목 뒤 살짝 밝은 배경 */
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #plot { 
+            width: 100vw; 
+            height: 100vh; 
+        }
+    </style>
+</head>
+<body>
+    <div id="title">🔵 LIVE: M0609 돔 표면 검사 중...</div>
+    <div id="plot"></div>
+
+    <script>
+        // 💡 [필수] 사용자님의 Firebase 설정값으로 변경해주세요!
+        const firebaseConfig = {
+            apiKey: "여기에_사용자님의_API_KEY를_넣어주세요",
+            authDomain: "rokey-d-2-4c32a.firebaseapp.com",
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "rokey-d-2-4c32a",
+            storageBucket: "rokey-d-2-4c32a.appspot.com",
+            messagingSenderId: "여기에_SENDER_ID를_넣어주세요",
+            appId: "여기에_APP_ID를_넣어주세요"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 3D 그래프 스타일 세팅 (밝은 배경에 맞춰 수정)
+        let traceNormal = { 
+            x: [], y: [], z: [], 
+            mode: 'markers', 
+            marker: { 
+                size: 3, 
+                color: '#3498db', /* 선명한 파란색 정상 궤적 */
+                opacity: 0.7 
+            }, 
+            type: 'scatter3d', 
+            name: '정상 궤적' 
+        };
+        let traceCrack = { 
+            x: [], y: [], z: [], 
+            mode: 'markers', 
+            marker: { 
+                size: 8, 
+                color: '#e74c3c', /* 더 선명한 빨간색 크랙 감지 */
+                opacity: 1.0, 
+                line: {color:'white', width:1} 
+            }, 
+            type: 'scatter3d', 
+            name: '크랙 감지' 
+        };
+        
+        let layout = { 
+            paper_bgcolor: '#f8f9fa', /* 밝은 배경 */
+            plot_bgcolor: '#f8f9fa', 
+            scene: { 
+                aspectmode: 'data', 
+                // 그리드 선과 축 색상을 밝은 배경에 보이도록 수정
+                xaxis: { showgrid: true, gridcolor: '#ddd', zerolinecolor: '#ccc', showticklabels: true, title: 'X', color: '#555' },
+                yaxis: { showgrid: true, gridcolor: '#ddd', zerolinecolor: '#ccc', showticklabels: true, title: 'Y', color: '#555' },
+                zaxis: { showgrid: true, gridcolor: '#ddd', zerolinecolor: '#ccc', showticklabels: true, title: 'Z', color: '#555' }
+            },
+            margin: { t: 0, b: 0, l: 0, r: 0 }, 
+            showlegend: true, /* 범례 표시 (선택사항, 지우려면 false) */
+            legend: { x: 0.85, y: 0.9, font: {color: '#333'} }
+        };
+        Plotly.newPlot('plot', [traceNormal, traceCrack], layout);
+
+        // 1. 실시간 궤적 그리기 (스트리밍)
+        db.ref('robot/dsr01/stream').on('child_added', (snapshot) => {
+            const p = snapshot.val();
+            if (p.is_crack) {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [1]);
+            } else {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [0]);
+            }
+        });
+
+        // 2. 스캔 시작 시 그래프 화면 자동 클리어
+        db.ref('robot/dsr01/stream').on('value', (snapshot) => {
+            if (!snapshot.exists()) {
+                Plotly.restyle('plot', { x: [[]], y: [[]], z: [[]] }, [0, 1]);
+            }
+        });
+    </script>
+</body>
+</html>

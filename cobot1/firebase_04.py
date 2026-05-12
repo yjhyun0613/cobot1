@@ -4,10 +4,11 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Bool
 import numpy as np
 import time
+import threading
+import queue  # 💡 비동기 통신용 큐 추가
 
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
+from firebase_admin import credentials, db
 
 def get_transform_matrix(x, y, z, rx=0, ry=0, rz=0):
     cx, cy, cz = np.cos([rx, ry, rz])
@@ -37,7 +38,7 @@ class FirebaseBridgeNode(Node):
     def __init__(self):
         super().__init__('firebase_bridge')
         self.is_active = False
-        self.record_enable = False # 💡 일시정지 스위치 변수 추가
+        self.record_enable = False 
         self.last_fb_time = 0.0
 
         try:
@@ -46,17 +47,33 @@ class FirebaseBridgeNode(Node):
                 firebase_admin.initialize_app(cred, {
                     'databaseURL': 'https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app'
                 })
-            self.db_pose_ref = db.reference('robot/dsr01/current_pose')
             self.get_logger().info('📻 통신 방송국(Firebase Bridge) 켜짐. 대기 중...')
         except Exception as e:
             self.get_logger().error(f'Firebase 연결 실패: {e}')
 
+        # 💡 [핵심] 파이어베이스 비동기 전송을 위한 큐와 워커 스레드
+        self.fb_queue = queue.Queue()
+        self.fb_worker = threading.Thread(target=self.firebase_set_worker, daemon=True)
+        self.fb_worker.start()
+
         self.joint_sub = self.create_subscription(JointState, '/dsr01/joint_states', self.joint_callback, 10)
         self.state_sub = self.create_subscription(Bool, '/dsr01/checking_state', self.state_callback, 10)
-        # 💡 일시정지 스위치 토픽 구독 추가
         self.enable_sub = self.create_subscription(Bool, '/dsr01/record_enable', self.enable_callback, 10)
 
-    # 💡 스위치 켜고 끄기
+    # =========================================================
+    # 🚚 [백그라운드] 파이어베이스 전담 택배기사 (경로와 데이터를 받아서 처리)
+    # =========================================================
+    def firebase_set_worker(self):
+        while rclpy.ok():
+            try:
+                ref_path, data = self.fb_queue.get(timeout=1.0)
+                db.reference(ref_path).set(data)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                pass # 일시적인 네트워크 에러 무시
+
+    # =========================================================
     def enable_callback(self, msg):
         self.record_enable = msg.data
 
@@ -65,16 +82,17 @@ class FirebaseBridgeNode(Node):
             self.get_logger().info('📡 로봇 동작 감지됨! 웹 생중계 시작.')
             self.is_active = True
             self.record_enable = False
-            db.reference('robot/dsr01/status').set({'is_scanning': True, 'timestamp': time.time()})
+            # 💡 [비동기] 큐에 던짐
+            self.fb_queue.put(('robot/dsr01/status', {'is_scanning': True, 'timestamp': time.time()}))
             
         elif msg.data == False and self.is_active:
             self.get_logger().info('🛑 동작 종료. 웹 생중계를 중지합니다.')
             self.is_active = False
             self.record_enable = False
-            db.reference('robot/dsr01/status').set({'is_scanning': False, 'timestamp': time.time()})
+            # 💡 [비동기] 큐에 던짐
+            self.fb_queue.put(('robot/dsr01/status', {'is_scanning': False, 'timestamp': time.time()}))
 
     def joint_callback(self, msg):
-        # 💡 전체 동작 중이더라도, record_enable이 꺼져있으면 쏘지 않음!
         if not self.is_active or not self.record_enable: 
             return
         
@@ -84,12 +102,14 @@ class FirebaseBridgeNode(Node):
             current_pos = forward_kinematics(q)
             
             current_time = time.time()
-            if current_time - self.last_fb_time > 0.33:  # 💡 0.33초마다 업데이트 (30Hz)
-                self.db_pose_ref.set({
+            if current_time - self.last_fb_time > 0.33:  
+                # 💡 [비동기] 큐에 위치 데이터를 던짐 (ROS 2 지연 0%)
+                pos_data = {
                     'x': float(current_pos[0]),
                     'y': float(current_pos[1]),
                     'z': float(current_pos[2])
-                })
+                }
+                self.fb_queue.put(('robot/dsr01/current_pose', pos_data))
                 self.last_fb_time = current_time
                 
         except Exception: pass

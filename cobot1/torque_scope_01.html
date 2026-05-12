@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>3D Inspection Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { background: #111; color: white; font-family: sans-serif; margin: 0; overflow: hidden; }
+        #header { display: flex; justify-content: space-around; align-items: center; background: #222; padding: 15px; border-bottom: 2px solid #444; }
+        .stat-box { text-align: center; }
+        .val { font-size: 24px; font-weight: bold; color: #00ff00; }
+        #judgement { font-size: 32px; padding: 10px 30px; border-radius: 10px; background: #444; }
+        #plot { width: 100vw; height: calc(100vh - 100px); }
+        .FAIL { background: #ff4136 !important; animation: blink 1s infinite; }
+        .PASS { background: #2ecc40 !important; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="stat-box">최대 오차율<br><span id="rate" class="val">0.000</span> %</div>
+        <div class="stat-box">최대 편차(mm)<br><span id="emax" class="val">0.000</span> mm</div>
+        <div id="judgement">WAITING</div>
+    </div>
+    <div id="plot"></div>
+
+    <script>
+        // 💡 [필수] Firebase 설정값을 본인의 콘솔에서 복사해 넣어주세요
+        const firebaseConfig = {
+            apiKey: "AIza...",
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "rokey-d-2-4c32a",
+            appId: "1:..."
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 그래프 초기화
+        let dataNormal = { x: [], y: [], z: [], mode: 'markers', marker: { size: 3, color: '#0074D9' }, type: 'scatter3d', name: '정상' };
+        let dataCrack = { x: [], y: [], z: [], mode: 'markers', marker: { size: 6, color: '#FF4136' }, type: 'scatter3d', name: '크랙' };
+        let layout = { 
+            paper_bgcolor: '#111', plot_bgcolor: '#111', 
+            scene: { aspectmode: 'data', xaxis: {color: '#fff'}, yaxis: {color: '#fff'}, zaxis: {color: '#fff'} },
+            margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true, legend: { font: {color: '#fff'} }
+        };
+        Plotly.newPlot('plot', [dataNormal, dataCrack], layout);
+
+        // 1. 실시간 궤적 리스너 (stream)
+        db.ref('robot/dsr01/stream').on('child_added', (snapshot) => {
+            const p = snapshot.val();
+            if (p.is_crack) {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [1]);
+            } else {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [0]);
+            }
+        });
+
+        // 2. 결과 리스너 (results)
+        db.ref('robot/dsr01/results').on('value', (snapshot) => {
+            const res = snapshot.val();
+            if (!res) return;
+            document.getElementById('rate').innerText = res.max_error_rate;
+            document.getElementById('emax').innerText = res.max_e_max;
+            const j = document.getElementById('judgement');
+            j.innerText = res.status;
+            j.className = res.status; // PASS or FAIL 클래스 적용
+        });
+
+        // 3. 자동 초기화 리스너 (삭제 시 그래프 클리어)
+        db.ref('robot/dsr01/stream').on('value', (snapshot) => {
+            if (!snapshot.exists()) {
+                Plotly.restyle('plot', { x: [[]], y: [[]], z: [[]] }, [0, 1]);
+            }
+        });
+    </script>
+</body>
+</html>

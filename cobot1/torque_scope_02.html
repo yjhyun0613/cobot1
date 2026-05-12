@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>M0609 라이브 3D 스캐너</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { background: #000; margin: 0; overflow: hidden; color: white; font-family: sans-serif;}
+        #title { position: absolute; top: 10px; left: 20px; z-index: 10; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        #plot { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="title">🔴 LIVE: M0609 돔 표면 검사 중...</div>
+    <div id="plot"></div>
+
+    <script>
+        // 💡 [필수] 본인의 Firebase 설정값으로 변경해주세요!
+        const firebaseConfig = {
+            apiKey: "AIza...",
+            databaseURL: "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "rokey-d-2-4c32a"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 3D 그래프 기본 틀 세팅
+        let traceNormal = { x: [], y: [], z: [], mode: 'markers', marker: { size: 3, color: '#0074D9', opacity: 0.6 }, type: 'scatter3d', name: '정상 궤적' };
+        let traceCrack = { x: [], y: [], z: [], mode: 'markers', marker: { size: 8, color: '#FF4136', opacity: 1.0, line: {color:'white', width:1} }, type: 'scatter3d', name: '크랙 감지' };
+        
+        let layout = { 
+            paper_bgcolor: '#000', plot_bgcolor: '#000', 
+            scene: { aspectmode: 'data', xaxis: {showgrid: false, zeroline: false, showticklabels: false}, yaxis: {showgrid: false, zeroline: false, showticklabels: false}, zaxis: {showgrid: false, zeroline: false, showticklabels: false} },
+            margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false
+        };
+        Plotly.newPlot('plot', [traceNormal, traceCrack], layout);
+
+        // 1. 실시간 궤적 그리기 (스트리밍)
+        db.ref('robot/dsr01/stream').on('child_added', (snapshot) => {
+            const p = snapshot.val();
+            if (p.is_crack) {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [1]);
+            } else {
+                Plotly.extendTraces('plot', { x: [[p.x]], y: [[p.y]], z: [[p.z]] }, [0]);
+            }
+        });
+
+        // 2. 스캔 시작 시 그래프 화면 자동 클리어
+        db.ref('robot/dsr01/stream').on('value', (snapshot) => {
+            if (!snapshot.exists()) {
+                Plotly.restyle('plot', { x: [[]], y: [[]], z: [[]] }, [0, 1]);
+            }
+        });
+    </script>
+</body>
+</html>
