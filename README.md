@@ -34,18 +34,23 @@ pip install firebase-admin numpy scipy plotly PySide6
 이 시스템은 4개의 개별 터미널을 열어 각각의 스크립트를 실행해야 합니다. 모든 터미널에서 ROS 2 환경(setup.bash)이 소스(source)되어 있어야 합니다.
 
 Terminal 0: 두산 로봇팔 모델과 연결
+
 ros2 launch dsr_bringup2 dsr_bringup2_rviz.launch.py mode:=real host:=192.168.1.100 port:=12345 model:=m0609
 
 Terminal 1: ROS-Firebase 통신 브릿지 실행
+
 python3 05_01_ros_firebase_bridge.py
 
 Terminal 2: 통합 제어 및 UI 실행
+
 python3 total_control.py
 
 Terminal 3: 결함 분석 (햅틱 스캐닝) 노드 실행
+
 python3 torque_monitor_09.py
 
 Terminal 4: Firebase 리포트 매니저 실행
+
 python3 firebase_04.py
 
 4) 핵심 로직: 토크 피드백 기반 결함 검출
