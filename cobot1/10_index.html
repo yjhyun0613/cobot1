@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DSR M0609 — 표면 검사 시스템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+:root {
+    --bg:#f6f8fb; --bg2:#edf5fc; --bg3:#cde6f7; --bg4:#b8d9f2;
+    --line:rgba(56,145,210,.25); --line2:rgba(56,145,210,.45);
+    --sky:#3b9bd4; --sky2:#2980b9;
+    --lime:#4caf75; --rose:#e05252; --amber:#d48a3a; --purple:#4c1d95; --violet:#9d174d; --violet2:#9d174d;
+    --text:#000000; --sub:#0f172a; --muted:#1e293b; --white:#ffffff;
+    --head:'Noto Sans KR',sans-serif; --body:'Noto Sans KR',sans-serif; --mono:'Noto Sans KR',monospace;
+    --r:8px; --rL:14px; --rXL:20px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:16.5px;line-height:1.5;overflow:hidden}
+  body::before{display: none}
+
+  /* ── NAVBAR ── */
+  .navbar{position:relative;z-index:100;display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;height:80px;border-bottom:1px solid var(--line2);
+    background:rgba(255,255,255,.85);backdrop-filter:blur(16px);flex-shrink:0;
+    box-shadow:0 1px 6px rgba(14,165,233,.08)}
+  .nav-brand{display:flex;align-items:center;gap:14px}
+  .nav-logo{width:46px;height:46px;border:2px solid var(--sky);border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:22px;color:var(--sky);background:rgba(14,165,233,.08)}
+  .nav-title{font-family:var(--head);font-size:24px;letter-spacing:3px;color:var(--text)}
+  .nav-tag{font-size:13.5px;color:var(--muted);font-family:var(--mono);background:var(--bg3);border:1px solid var(--line2);padding:2px 7px;border-radius:4px;letter-spacing:1px}
+  .nav-mid{display:flex;align-items:center;gap:16px}
+  .pill{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:20px;font-family:var(--mono);font-size:13.5px;color:var(--muted);transition:all .3s}
+  .pill.ok {border-color:rgba(22,163,74,.35);color:var(--lime);background:rgba(22,163,74,.07)}
+  .pill.err{border-color:rgba(255,0,0,.3);color:var(--rose);background:rgba(255,0,0,.06)}
+  .pdot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .pill.ok .pdot{animation:blink 2s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .nav-clock{font-family:var(--mono);font-size:24px;color:var(--sky2);letter-spacing:2px;background:var(--bg3);border:1px solid var(--line2);padding:4px 12px;border-radius:7px}
+  .nav-actions{display:flex;align-items:center;gap:8px}
+  .status-dot-wrap{display:flex;align-items:center;gap:10px;margin-right:4px}
+  .sdot-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-family:var(--body)}
+  .sdot{width:9px;height:9px;border-radius:50%;background:var(--muted);transition:background .3s}
+  .sdot-item.ok .sdot{background:#16a34a;box-shadow:0 0 6px rgba(22,163,74,.5)}
+  .sdot-item.err .sdot{background:#dc2626;box-shadow:0 0 6px rgba(220,38,38,.5)}
+  .sdot-item.ok span{color:#166534}
+  .sdot-item.err span{color:#dc2626}
+  .btn-go{display:flex;align-items:center;gap:6px;padding:10px 24px;background:var(--sky);color:#fff;border:none;border-radius:var(--r);font-family:var(--body);font-weight:700;font-size:15.5px;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(14,165,233,.35)}
+  .btn-go:hover:not(:disabled){background:var(--sky2);transform:translateY(-1px)}
+  .btn-go:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn-halt{display:flex;align-items:center;gap:6px;padding:10px 24px;background:transparent;color:var(--rose);border:1px solid rgba(255,0,0,.35);border-radius:var(--r);font-family:var(--body);font-size:15.5px;cursor:pointer;transition:all .2s}
+  .btn-halt:hover:not(:disabled){background:rgba(255,0,0,.07);border-color:var(--rose)}
+  .btn-halt:disabled{opacity:.25;cursor:not-allowed}
+  .btn-go svg,.btn-halt svg{width:12px;height:12px;flex-shrink:0}
+
+  /* ── LAYOUT 3열 ── */
+  .page{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
+  .grid{flex:1;display:grid;grid-template-columns:1.5fr 1.2fr 420px;gap:14px;padding:16px 22px;overflow:hidden}
+  .col{display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:0}
+
+  /* ── CARD ── */
+  .card{background:var(--bg2);border:0px solid var(--line2);border-radius:var(--rL);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 4px rgba(14,165,233,.06)}
+  .ch{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);flex-shrink:0;background:rgba(14,165,233,.03)}
+  .ct{font-family:var(--mono);font-size:15.6px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-weight:700}
+
+  /* ── 1열 상태 ── */
+  .status-card{flex-shrink:0}
+  .status-hero{display:flex;align-items:center;gap:22px;padding:18px 22px 14px}
+  .orb-wrap{flex-shrink:0;width:100px;height:100px;position:relative}
+  .orb-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--bg4);transition:border-color .5s,box-shadow .5s}
+  .orb-ring.spin{animation:spin 3s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .orb{position:absolute;inset:11px;border-radius:50%;background:var(--bg3);border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;transition:border-color .5s,background .5s}
+  .orb svg{width:30px;height:30px;transition:color .4s}
+  body.s-moving    .orb-ring{border-color:var(--amber);box-shadow:0 0 16px rgba(217,119,6,.25)} body.s-moving    .orb{border-color:var(--amber);background:rgba(217,119,6,.06)} body.s-moving    .orb svg{color:var(--amber)} body.s-moving    .slabel{color:var(--amber)}
+  body.s-inspecting .orb-ring{border-color:var(--violet);box-shadow:0 0 20px rgba(236,72,153,.6);animation:spin 1.5s linear infinite}  body.s-inspecting .orb{border-color:var(--violet);background:rgba(236,72,153,.08)}  body.s-inspecting .orb svg{color:var(--violet)}   body.s-inspecting .slabel{color:var(--violet)}
+  body.s-pass      .orb-ring{border-color:var(--lime);box-shadow:0 0 16px rgba(22,163,74,.28)} body.s-pass      .orb{border-color:var(--lime);background:rgba(22,163,74,.06)}  body.s-pass      .orb svg{color:var(--lime)}  body.s-pass      .slabel{color:var(--lime)}
+  body.s-defect    .orb-ring{border-color:var(--rose);box-shadow:0 0 16px rgba(255,0,0,.35);animation:dflash .6s step-end infinite} body.s-defect .orb{border-color:var(--rose);background:rgba(255,0,0,.06)} body.s-defect .orb svg{color:var(--rose)} body.s-defect .slabel{color:var(--rose)}
+  @keyframes dflash{0%,100%{opacity:1}50%{opacity:.2}}
+  .sinfo{flex:1}
+  .slabel{font-family:var(--head);font-size:46px;letter-spacing:3px;color:var(--muted);line-height:1;transition:color .5s;font-weight:700}
+  .sdesc{margin-top:4px;font-size:12px;color:var(--muted);font-family:var(--mono);font-weight:700}
+  .stats-bar{display:flex;border-top:1px solid var(--line);flex-shrink:0;background:rgba(14,165,233,.02)}
+  .sc{flex:1;display:flex;flex-direction:column;align-items:center;padding:11px 8px;gap:2px;border-right:1px solid var(--line)}.sc:last-child{border-right:none}
+  .sn{font-family:var(--head);font-size:36px;line-height:1;font-weight:700}
+  .sc.t .sn{color:var(--text)}.sc.p .sn{color:var(--lime)}.sc.f .sn{color:var(--rose)}.sc.r .sn{color:var(--sky2)}
+  .sl{font-size:12px;color:var(--muted);letter-spacing:1px;font-family:var(--mono);font-weight:700}
+
+  /* ── 이벤트 로그 ── */
+  .log-card{flex:2;min-height:0}
+  .timeline{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:5px;min-height:0}
+  .timeline::-webkit-scrollbar{width:3px}.timeline::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+  .tl-empty{text-align:center;padding:24px;color:var(--muted);font-family:var(--mono);font-size:14.4px}
+  .tl-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);animation:ein .2s ease}
+  .tl-item.defect-log{cursor:pointer;border-left:3px solid var(--rose)}
+  .tl-item.defect-log:hover{background:var(--bg4);border-color:rgba(255,0,0,.35)}
+  @keyframes ein{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+  .tl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .tl-dot.moving{background:var(--amber)}.tl-dot.inspecting{background:var(--violet)}
+  .tl-dot.pass{background:var(--lime)}.tl-dot.defect{background:var(--rose)}
+  .tl-dot.idle{background:var(--muted)}.tl-dot.control{background:var(--purple)}
+  .tl-text{flex:1;font-size:13px;color:var(--sub);font-weight:700}
+  .tl-ts{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;font-weight:700}
+  .btn-sm{background:none;border:1px solid var(--line2);color:var(--sky2);cursor:pointer;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:var(--r);transition:all .2s}
+  .btn-sm:hover{background:rgba(14,165,233,.08);border-color:var(--sky)}
+
+  /* ── 2열: 탭 카드 ── */
+  .ctrl-card{flex:1;min-height:0;display:flex;flex-direction:column}
+  .tab-header{display:flex;align-items:stretch;flex-shrink:0;border-bottom:1px solid var(--line);background:var(--bg3)}
+  .tab-btn{flex:1;padding:10px 12px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-family:var(--mono);font-size:13.2px;letter-spacing:1px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px;text-transform:uppercase}
+  .tab-btn svg{width:12px;height:12px;flex-shrink:0}
+  .tab-btn:hover{color:var(--sky);background:rgba(14,165,233,.05)}
+  .tab-btn.active{color:var(--sky2);border-bottom-color:var(--sky);background:var(--bg2);font-weight:600}
+  .tab-div{width:1px;background:var(--line);flex-shrink:0}
+  .tab-pane{display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+  .tab-pane.active{display:flex}
+
+  /* ── 현재값 그리드 ── */
+  .cur-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:10px 14px;flex-shrink:0;border-bottom:1px solid var(--line);background:rgba(14,165,233,.015)}
+  .cur-cell{background:var(--bg3);border:1px solid var(--line);border-radius:6px;padding:5px 8px;display:flex;flex-direction:column;gap:1px}
+  .cur-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px}
+  .cur-val{font-family:var(--mono);font-size:14.3px;color:var(--sky2);font-weight:600}
+  .cur-val.stale{color:var(--muted)}
+
+  /* ── 슬라이더 영역 ── */
+  .slider-scroll{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:4px}
+  .slider-scroll::-webkit-scrollbar{width:3px}.slider-scroll::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+  .sec-lbl{font-family:var(--mono);font-size:14.3px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px;margin:4px 0 5px;flex-shrink:0}
+  .sec-lbl::after{content:'';flex:1;height:1px;background:var(--line2)}
+  .s-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+  .s-lbl{font-family:var(--mono);font-size:13.2px;color:var(--sub);width:26px;flex-shrink:0;font-weight:500}
+  .s-val{font-family:var(--mono);font-size:13.2px;color:var(--sky2);width:54px;text-align:right;flex-shrink:0;background:var(--bg3);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  input[type=range]{flex:1;height:3px;accent-color:var(--sky);cursor:pointer;-webkit-appearance:none;appearance:none;background:var(--bg4);border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--sky);border:2px solid #fff;box-shadow:0 1px 4px rgba(14,165,233,.4);cursor:pointer}
+  .vel-row{display:flex;gap:7px;margin:4px 0 8px}
+  .vel-item{flex:1;display:flex;flex-direction:column;gap:3px}
+  .vel-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .vel-inp{width:100%;padding:5px 7px;border:1px solid var(--line2);border-radius:var(--r);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:13.2px;outline:none;transition:border-color .2s}
+  .vel-inp:focus{border-color:var(--sky)}
+  .run-wrap{padding:10px 14px;flex-shrink:0;border-top:1px solid var(--line)}
+  .run-btn{width:100%;padding:9px;border-radius:var(--r);border:none;background:var(--sky);color:#fff;font-family:var(--body);font-size:15.4px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 6px rgba(14,165,233,.3)}
+  .run-btn:hover{background:var(--sky2)}.run-btn:active{transform:scale(.98)}.run-btn svg{width:13px;height:13px}
+
+  /* ════════════════════════════════════════
+     조그 패널 (±버튼 이동)
+  ════════════════════════════════════════ */
+  .jog-panel{padding:10px 14px;flex-shrink:0;border-top:2px dashed rgba(14,165,233,.2);background:rgba(14,165,233,.02)}
+
+  /* 축 선택 칩 */
+  .jog-axis-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .axis-chip{
+    padding:4px 9px;border-radius:20px;border:1px solid var(--line2);
+    background:var(--bg3);color:var(--muted);font-family:var(--mono);font-size:12px;
+    cursor:pointer;transition:all .15s;user-select:none;font-weight:500;
+  }
+  .axis-chip:hover{border-color:var(--sky);color:var(--sky)}
+  .axis-chip.sel{background:var(--sky);color:#fff;border-color:var(--sky);box-shadow:0 1px 6px rgba(14,165,233,.35)}
+
+  /* 스텝 + 조그버튼 행 */
+  .jog-ctrl-row{display:flex;align-items:center;gap:7px}
+
+  /* 조그 스텝 고정값 표시 뱃지 */
+  .jog-step-badge{
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+    background:var(--bg3);border:1px solid var(--line);border-radius:4px;
+    padding:3px 7px;flex-shrink:0;white-space:nowrap;
+  }
+
+  /* 현재 조그값 표시 */
+  .jog-cur{
+    flex:1;text-align:center;font-family:var(--mono);font-size:13px;
+    color:var(--sky2);font-weight:600;background:var(--bg3);
+    border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;
+  }
+  .jog-cur.no-sel{color:var(--muted);font-size:14.4px}
+
+  /* ± 버튼 */
+  .jog-btn{
+    width:52px;height:46px;border-radius:var(--r);border:1px solid var(--line2);
+    background:var(--bg3);color:var(--sub);font-size:16.5px;font-weight:700;
+    cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;user-select:none;
+  }
+  .jog-btn:hover{background:var(--sky);color:#fff;border-color:var(--sky);box-shadow:0 2px 8px rgba(14,165,233,.3)}
+  .jog-btn:active{transform:scale(.93)}
+  .jog-btn.minus:hover{background:var(--amber);border-color:var(--amber);box-shadow:0 2px 8px rgba(217,119,6,.3)}
+  .jog-btn:active, .jog-btn.holding{background:var(--sky);color:#fff;border-color:var(--sky);box-shadow:0 2px 8px rgba(14,165,233,.4);transform:scale(.93)}
+  .jog-btn.minus.holding{background:var(--amber);border-color:var(--amber);box-shadow:0 2px 8px rgba(217,119,6,.4)}
+  .jog-feedback{height:18px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--purple);margin-top:5px;opacity:0;transition:opacity .3s}
+  .jog-feedback.show{opacity:1}
+
+  /* ── 3열 ── */
+  .action-col{flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2);border:0px solid var(--line2);border-radius:var(--rL);overflow:hidden;box-shadow:0 1px 4px rgba(14,165,233,.06)}
+  .ac-head{padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(14,165,233,.03);flex-shrink:0;font-family:var(--mono);font-size:14.3px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-weight:700}
+  .ac-body{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .ac-sec-lbl{font-family:var(--mono);font-size:14.3px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:6px;font-weight:700}
+  .ac-sec-lbl::after{content:'';flex:1;height:1px;background:var(--line2)}
+  .grip-col{display:flex;flex-direction:column;gap:7px}
+  .grip-btn{width:100%;padding:11px 8px;border-radius:var(--r);border:1px solid var(--line2);background:var(--bg3);font-family:var(--body);font-size:14.3px;font-weight:800;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .grip-btn svg{width:14px;height:14px;flex-shrink:0}
+  .grip-btn:active {transform: scale(.98)}
+  .grip-open{color:#fff;background:var(--lime);border-color:var(--lime)}.grip-open:hover{background:#166534;border-color:#166534}
+  .grip-close{color:#fff;background:var(--amber);border-color:var(--amber)}.grip-close:hover{background:#78350f;border-color:#78350f}
+  .ac-spacer{flex:1}
+  .home-btn{width:100%;padding:11px 8px;border-radius:var(--r);border:2px solid var(--sky);background:var(--sky);color:#fff;font-family:var(--head);font-size:16.5px;letter-spacing:2px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;font-weight:700}
+  .home-btn:hover{background:var(--sky2);border-color:var(--sky2);box-shadow:0 2px 10px rgba(14,165,233,.3);transform:translateY(-1px)}.home-btn:active{transform:scale(.98)}.home-btn svg{width:16px;height:16px}
+  .estop-btn{width:100%;padding:13px 8px;border-radius:var(--r);background:var(--rose);color:#fff;border:none;font-family:var(--head);font-size:16.5px;letter-spacing:2px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 3px 10px rgba(255,0,0,.4);flex-shrink:0;font-weight:700}
+  .estop-btn:hover{background:#be123c;transform:translateY(-1px);box-shadow:0 5px 16px rgba(255,0,0,.5)}.estop-btn:active{transform:scale(.98)}.estop-btn svg{width:16px;height:16px}
+
+  /* ── 불량 팝업 ── */
+  .mbg{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center}
+  .mbg.open{display:flex}
+  .modal{background:var(--white);border:1px solid rgba(255,0,0,.25);border-radius:var(--rXL);width:min(900px,95vw);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(255,0,0,.10),0 24px 60px rgba(15,23,42,.22);animation:mopen .3s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes mopen{from{opacity:0;transform:scale(.9) translateY(14px)}to{opacity:1;transform:none}}
+  .mtop{padding:16px 20px;border-bottom:1px solid rgba(255,0,0,.12);display:flex;align-items:center;gap:12px;background:rgba(255,0,0,.03);border-radius:var(--rXL) var(--rXL) 0 0}
+  .micon{width:38px;height:38px;border-radius:9px;background:rgba(255,0,0,.1);border:1px solid rgba(255,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .mtitle{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--rose)}
+  .msub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+  .mts{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;line-height:1.7}
+  .mimgarea{width:100%;height:420px;background:var(--bg);border-bottom:1px solid rgba(255,0,0,.1);position:relative;overflow:hidden}
+  .plot3d-area{width:100%;height:100%}
+  .mimgph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:var(--muted);font-family:var(--mono);font-size:12px;pointer-events:none;background:var(--bg)}
+  .mimg{width:100%;height:100%;object-fit:contain;display:none}.mimg.show{display:block}
+  .mimgph{display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--muted);font-family:var(--mono);font-size:12px}
+  .mimgph svg{width:30px;height:30px;opacity:.2}
+  .mimgph .spin-ring{width:24px;height:24px;border-radius:50%;border:2px solid var(--bg4);border-top-color:var(--rose);animation:spin .8s linear infinite;margin-bottom:2px}
+  .mdata-wrap{padding:12px 20px;display:flex;gap:16px;align-items:center;flex-shrink:0}
+  .rate-circle{flex-shrink:0;position:relative;width:84px;height:84px}
+  .rate-circle svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .rate-circle .track{fill:none;stroke:var(--bg3);stroke-width:7}
+  .rate-circle .arc{fill:none;stroke:var(--lime);stroke-width:7;stroke-linecap:round;stroke-dasharray:251.2;stroke-dashoffset:251.2;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1),stroke .3s}
+  .rate-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .rate-num{font-family:var(--head);font-size:16.5px;letter-spacing:1px;color:var(--text);line-height:1}
+  .rate-lbl{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+  .mfields{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mf{display:flex;flex-direction:column;gap:2px}
+  .mk{font-size:10px;letter-spacing:1px;color:var(--muted);font-family:var(--mono)}
+  .mv{font-size:14px;color:var(--text)}.mv.mono{font-family:var(--mono);font-size:12px}
+  .mfoot{padding:12px 20px;border-top:1px solid rgba(255,0,0,.1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .mdb{font-family:var(--mono);font-size:12px;color:var(--muted)}.mdb.ok{color:var(--lime)}.mdb.fail{color:var(--rose)}
+  .mok{padding:8px 22px;background:var(--sky);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-family:var(--body);font-weight:600;transition:all .2s;box-shadow:0 2px 6px rgba(14,165,233,.3)}
+  .mok:hover{background:var(--sky2)}
+
+  @media(max-width:1100px){.grid{grid-template-columns:2fr 1.5fr 160px}}
+  @media(max-width:860px) {.grid{grid-template-columns:1fr;overflow:auto}}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">DSR</div>
+      <span class="nav-title">INSPECTION</span>
+      <span class="nav-tag">M0609 · v3.4</span>
+    </div>
+    <div class="nav-mid"></div>
+    <div class="nav-actions">
+      <div class="status-dot-wrap">
+        <div class="sdot-item" id="fb-pill" title="웹 ↔ Firebase 연결">
+          <div class="sdot"></div><span>Firebase</span>
+        </div>
+        <div class="sdot-item" id="ros-pill" title="ROS ↔ Firebase 연결">
+          <div class="sdot"></div><span>ROS</span>
+        </div>
+      </div>
+      <button class="btn-go" id="btn-start">
+        <svg viewBox="0 0 16 16" fill="currentColor"><polygon points="3,2 13,8 3,14"/></svg>검사 시작
+      </button>
+      <button class="btn-halt" id="btn-stop" disabled>
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1"/></svg>검사 종료
+      </button>
+    </div>
+  </nav>
+
+  <div class="grid">
+
+    <!-- ═══ 1열: 상태 + 실시간 그래프 ═══ -->
+    <div class="col">
+      <div class="card status-card">
+        <div class="ch">
+          <span class="ct">로봇 상태</span>
+          <span style="font-family:var(--mono);font-size:18px;color:var(--muted)" id="upd">업데이트 없음</span>
+        </div>
+        <div class="status-hero">
+          <div class="orb-wrap">
+            <div class="orb-ring" id="orb-ring"></div>
+            <div class="orb">
+              <svg id="ic-idle"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="#94a3b8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+              <svg id="ic-moving"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="#d97706" style="display:none"><path d="M5 12h14M15 7l5 5-5 5"/></svg>
+              <svg id="ic-inspecting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="#ec4899" style="display:none"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+              <svg id="ic-pass"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#16a34a" style="display:none"><path d="M20 6 9 17l-5-5"/></svg>
+              <svg id="ic-defect"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   color="#e11d48" style="display:none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </div>
+          </div>
+          <div class="sinfo">
+            <div class="slabel" id="slabel">대기 중</div>
+            <div class="sdesc"  id="sdesc">검사 시작 버튼을 눌러주세요</div>
+          </div>
+        </div>
+        <div class="stats-bar">
+          <div class="sc t"><div class="sn" id="cnt-total">0</div><div class="sl">TOTAL</div></div>
+          <div class="sc p"><div class="sn" id="cnt-pass">0</div><div class="sl">PASS</div></div>
+          <div class="sc f"><div class="sn" id="cnt-fail">0</div><div class="sl">FAIL</div></div>
+          <div class="sc r"><div class="sn" id="cnt-rate">—</div><div class="sl">PASS RATE</div></div>
+        </div>
+      </div>
+
+      <!-- 3D 뷰 (상시) -->
+      <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="ch" style="flex-shrink:0;">
+          <span class="ct">3D VIEW</span>
+        </div>
+        <iframe src="3d_view_09.html" style="flex:1;border:none;width:100%;min-height:0;" allowfullscreen></iframe>
+      </div>
+    </div>
+
+    <!-- ═══ 2열: 조인트 / 태스크 탭 ═══ -->
+    <div class="col">
+      <div class="card ctrl-card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-joint" onclick="switchTab('joint')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="5" r="2.5"/>
+              <circle cx="19" cy="12" r="2.5"/><circle cx="12" cy="19" r="2.5"/>
+              <path d="M7.5 12h4M12 7.5v4M14.5 12h4M12 14.5v4" stroke-width="1.5"/>
+            </svg>조인트
+          </button>
+          <div class="tab-div"></div>
+          <button class="tab-btn" id="tab-task" onclick="switchTab('task')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>태스크
+          </button>
+        </div>
+
+        <!-- 조인트 탭 -->
+        <div class="tab-pane active" id="pane-joint">
+          <div class="cur-grid" id="joint-cur"></div>
+          <div class="slider-scroll">
+            <div class="sec-lbl">목표 각도 설정</div>
+            <div id="joint-sliders"></div>
+            <div class="sec-lbl">속도 · 가속도</div>
+            <div class="vel-row">
+              <div class="vel-item"><div class="vel-lbl">VEL (°/s)</div><input class="vel-inp" id="j-vel" type="number" value="30" min="1" max="180"/></div>
+              <div class="vel-item"><div class="vel-lbl">ACC (°/s²)</div><input class="vel-inp" id="j-acc" type="number" value="60" min="1" max="360"/></div>
+            </div>
+          </div> 
+          <div style="flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--line);">
+            <div class="sec-lbl" style="margin-top: 0; margin-bottom: 8px;">그리퍼</div>
+            <div style="display:flex; gap:8px;">
+              <button class="grip-btn grip-open" onclick="sendGripper('open')" style="flex:1; padding:9px; font-size:15.4px;">
+                열기
+              </button>
+              <button class="grip-btn grip-close" onclick="sendGripper('close')" style="flex:1; padding:9px; font-size:15.4px;">
+                닫기
+              </button>
+            </div>
+          </div>
+          <div class="run-wrap" style="display:flex;gap:8px;">
+            <button class="run-btn" onclick="sendHome()" style="flex:1;background:var(--sky);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+              홈 복귀
+            </button>
+            <button class="run-btn" onclick="sendJoint()" style="flex:1;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M15 7l5 5-5 5"/></svg>
+              조인트 이동
+            </button>
+          </div>
+          <!-- 조인트 조그 패널 -->
+          <div class="jog-panel">
+            <div class="sec-lbl">조인트 조그</div>
+            <div class="jog-axis-row" id="j-axis-chips"></div>
+            <div class="jog-ctrl-row">
+              <button class="jog-btn minus" id="j-btn-minus">−</button>
+              <div class="jog-cur no-sel" id="j-jog-cur">축을 선택하세요</div>
+              <button class="jog-btn" id="j-btn-plus">+</button>
+              <span class="jog-step-badge" id="j-step-badge">5°/step</span>
+            </div>
+            <div class="jog-feedback" id="j-jog-fb"></div>
+          </div>
+        </div>
+
+        <!-- 태스크 탭 -->
+        <div class="tab-pane" id="pane-task">
+          <div class="cur-grid" id="task-cur"></div>
+          <div class="slider-scroll">
+            <div class="sec-lbl">목표 위치 설정</div>
+            <div id="task-sliders"></div>
+            <div class="sec-lbl">속도 · 가속도</div>
+            <div class="vel-row">
+              <div class="vel-item"><div class="vel-lbl">VEL (mm/s)</div><input class="vel-inp" id="t-vel" type="number" value="100" min="1" max="1000"/></div>
+              <div class="vel-item"><div class="vel-lbl">ACC (mm/s²)</div><input class="vel-inp" id="t-acc" type="number" value="200" min="1" max="2000"/></div>
+            </div>
+          </div>
+          <div style="flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--line);">
+            <div class="sec-lbl" style="margin-top: 0; margin-bottom: 8px;">그리퍼</div>
+            <div style="display:flex; gap:8px;">
+              <button class="grip-btn grip-open" onclick="sendGripper('open')" style="flex:1; padding:9px; font-size:15.4px;">
+                열기
+              </button>
+              <button class="grip-btn grip-close" onclick="sendGripper('close')" style="flex:1; padding:9px; font-size:15.4px;">
+                닫기
+              </button>
+            </div>
+          </div>
+          <div class="run-wrap" style="display:flex;gap:8px;">
+            <button class="run-btn" onclick="sendHome()" style="flex:1;background:var(--sky);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+              홈 복귀
+            </button>
+            <button class="run-btn" onclick="sendTask()" style="flex:1;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M15 7l5 5-5 5"/></svg>
+              태스크 이동
+            </button>
+          </div>
+          <!-- 태스크 조그 패널 -->
+          <div class="jog-panel">
+            <div class="sec-lbl">태스크 조그</div>
+            <div class="jog-axis-row" id="t-axis-chips"></div>
+            <div class="jog-ctrl-row">
+              <button class="jog-btn minus" id="t-btn-minus">−</button>
+              <div class="jog-cur no-sel" id="t-jog-cur">축을 선택하세요</div>
+              <button class="jog-btn" id="t-btn-plus">+</button>
+              <span class="jog-step-badge" id="t-step-badge">5/step</span>
+            </div>
+            <div class="jog-feedback" id="t-jog-fb"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ 3열: 이벤트 로그 + 수동조작 ═══ -->
+    <div class="col">
+      <!-- 3열 1행: 이벤트 로그 -->
+      <div class="card log-card">
+        <div class="ch">
+          <span class="ct">이벤트 로그</span>
+          <button class="btn-sm" id="btn-clear">지우기</button>
+        </div>
+        <div class="timeline" id="timeline">
+          <div class="tl-empty">검사를 시작하면 이벤트가 여기에 표시됩니다</div>
+        </div>
+      </div>
+
+      <!-- 3열 2행: 수동조작 -->
+      <div class="action-col">
+        <div class="ac-head">수동 조작</div>
+        <div class="ac-body">
+          <div style="display:flex;gap:8px;">
+            <button class="home-btn" onclick="sendControl('pause', {})" style="flex:1;background:var(--sky);border-color:var(--sky);color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              일시정지
+            </button>
+            <button class="home-btn" onclick="sendControl('resume', {})" style="flex:1;background:var(--sky);border-color:var(--sky);color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              재개
+            </button>
+          </div>
+          <button class="estop-btn" onclick="sendEstop()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></svg>
+            비상 정지
+          </button>
+          <div style="display:flex;gap:8px;">
+            <button id="btn-recover" class="home-btn" onclick="sendRecover()"
+              style="flex:1;background:#d48a3a;border-color:#d48a3a;color:#fff;opacity:0.35;cursor:not-allowed;" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12a8 8 0 018-8v4l4-4-4-4v4a10 10 0 100 10"/></svg>
+              서보 ON 복구
+            </button>
+            <button id="btn-safe-reset" class="home-btn" onclick="sendSafeStopReset()"
+              style="flex:1;background:#e07a52;border-color:#e07a52;color:#fff;opacity:0.35;cursor:not-allowed;" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              보호정지 해제
+            </button>
+          </div>
+          <!-- 복구 모드 진입 버튼 (보호정지 시에만 활성) -->
+          <button id="btn-recovery-mode" class="home-btn" onclick="sendRecoveryModeOn()"
+            style="width:100%;background:var(--sky);border-color:var(--sky);color:#fff;opacity:0.35;cursor:not-allowed;" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            복구 모드 (조그로 외력 제거)
+          </button>
+          <!-- 복구 모드 활성 중 안내 배너 (평소엔 숨김) -->
+          <div id="recovery-panel" style="display:none;flex-direction:column;gap:7px;padding:10px 12px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.35);border-radius:var(--r);">
+            <div style="font-family:var(--mono);font-size:12px;color:var(--sky);font-weight:700;letter-spacing:1px;">🔵 복구 모드 활성</div>
+            <div id="recovery-msg" style="font-family:var(--mono);font-size:11.5px;color:var(--sub);line-height:1.7;white-space:pre-wrap;"></div>
+            <button onclick="sendRecoveryModeOff()"
+              style="width:100%;padding:9px;border:none;background:var(--sky);color:#fff;border-radius:var(--r);cursor:pointer;font-family:var(--body);font-size:13.5px;font-weight:700;">
+              ✅ 외력 제거 완료 — 복구 완료
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 불량 팝업 -->
+<div class="mbg" id="mbg">
+  <div class="modal">
+    <div class="mtop">
+      <div class="micon">⚠</div>
+      <div><div class="mtitle">DEFECT DETECTED</div><div class="msub" id="msub">불량품이 감지되었습니다</div></div>
+      <div class="mts" id="mts">—</div>
+    </div>
+
+    <!-- 3D 인터랙티브 뷰 -->
+    <div class="mimgarea">
+      <!-- 기존 div를 iframe으로 변경 -->
+      <iframe id="defect-iframe" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+      <div class="mimgph" id="mimgph">
+        <div class="spin-ring"></div>
+        3D 데이터 로딩 중...
+      </div>
+    </div>
+
+    <div class="mdata-wrap">
+      <div class="rate-circle">
+        <svg viewBox="0 0 90 90"><circle class="track" cx="45" cy="45" r="40"/><circle class="arc" cx="45" cy="45" r="40" id="arc"/></svg>
+        <div class="rate-center"><div class="rate-num" id="m-rate-num">—</div><div class="rate-lbl">ERROR</div></div>
+      </div>
+      <div class="mfields">
+        <div class="mf"><div class="mk">날짜</div><div class="mv" id="m-date">—</div></div>
+        <div class="mf"><div class="mk">시간</div><div class="mv" id="m-time">—</div></div>
+        <div class="mf"><div class="mk">DB 저장</div><div class="mv mono mdb" id="mdb">저장 중...</div></div>
+        <div class="mf"><div class="mk">3D 상세보기</div>
+          <div class="mv"><a id="m-3d-link" href="#" target="_blank"
+            style="color:var(--sky);font-family:var(--mono);font-size:11px;text-decoration:none;">
+            새 탭에서 열기 →</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <span style="font-family:var(--mono);font-size:13px;color:var(--muted)">마우스로 3D 뷰를 드래그해 확인하세요</span>
+      <button class="mok" id="mok">확인 및 계속</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════
+   Firebase 설정
+══════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCCY5tdlAhNhhlxCwdXHOTOrnyGWGFz6hc",
+  authDomain:        "rokey-d-2-4c32a.firebaseapp.com",
+  databaseURL:       "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "rokey-d-2-4c32a",
+  storageBucket:     "rokey-d-2-4c32a.firebasestorage.app",
+  messagingSenderId: "97777845306",
+  appId:             "1:97777845306:web:6a3122b918c1f3651c2103"
+};
+const DB_PATHS = {
+  state:"robot/state", stats:"robot/stats", defect:"robot/defect",
+  joints:"robot/joints", task:"robot/task",
+  command:"robot/command", control:"robot/control",
+  robotState:"robot/robot_state",
+  recoveryMode:"robot/recovery_mode",
+  baseline:     "robot/dsr01/baseline",
+  baselinePath: "robot/dsr01/baseline_path",
+  currentPose:  "robot/dsr01/current_pose",
+};
+// Firestore 불량 로그 컬렉션
+const DEFECT_LOGS_COL = "defect_logs";
+const HOME_JOINTS = {j1:0,j2:0,j3:90,j4:0,j5:90,j6:0};
+
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, onChildAdded, onDisconnect, set, get, child, remove }
+                          from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getFirestore }   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+let rtdb, fsdb;
+
+/* ══════════════════════════════════════════════════
+   연결 상태 관리
+   fb-pill  : 웹 ↔ Firebase SDK 연결 여부
+   ros-pill : ROS ↔ Firebase 연결 여부
+               → robot/joints 또는 robot/state의
+                 updatedAt 타임스탬프 기준 10초 이내면 연결됨
+══════════════════════════════════════════════════ */
+function setFbPill(ok, msg) {
+  const p = document.getElementById('fb-pill');
+  p.className = 'sdot-item ' + (ok ? 'ok' : 'err');
+}
+function setRosPill(ok) {
+  const p = document.getElementById('ros-pill');
+  p.className = 'sdot-item ' + (ok ? 'ok' : 'err');
+}
+
+// ROS 워치독: 10초 안에 robot/joints 또는 robot/state 업데이트 없으면 끊김
+let rosWd = null;
+function resetRosWd() {
+  setRosPill(true);
+  clearTimeout(rosWd);
+  rosWd = setTimeout(() => setRosPill(false), 15000);
+}
+
+/* Firebase 초기화 */
+try {
+  const app = initializeApp(FIREBASE_CONFIG);
+  rtdb = getDatabase(app);
+  fsdb = getFirestore(app);
+  setFbPill(true);
+
+  // 웹 종료/연결 끊김 시 robot/* 전체 삭제
+  // → 재시작 시 브릿지가 실시간으로 새로 채워줌 (브릿지는 항상 같이 켜는 전제)
+  const RESET_PATHS = [
+    'robot/command', 'robot/control', 'robot/state', 'robot/robot_state',
+    'robot/joints',  'robot/task',    'robot/stats', 'robot/recovery_mode'
+  ];
+  RESET_PATHS.forEach(path => onDisconnect(ref(rtdb, path)).remove());
+
+  // 페이지 로드 시에도 잔존 데이터 즉시 삭제
+  // → 이전 세션의 오래된 값이 잠깐 보이는 현상 방지
+  // → 브릿지의 _initial_state_sync(2초 후)가 실제 상태를 새로 써줌
+  Promise.all(RESET_PATHS.map(path => remove(ref(rtdb, path))))
+    .then(() => console.log('[Init] Firebase robot/* 초기화 완료'))
+    .catch(e => console.error('[Init] Firebase 초기화 실패:', e));
+} catch(e) {
+  setFbPill(false, e.message);
+  console.error(e);
+}
+
+/* ══════════════════════════════════════════════════
+   Realtime DB 리스너
+══════════════════════════════════════════════════ */
+const SM = {
+  idle:       {label:'대기 중',        desc:'검사 시작 버튼을 눌러주세요',          cls:'',             icon:'idle'},
+  moving:     {label:'물건 옮기는 중', desc:'로봇이 물건을 검사존으로 이동 중',     cls:'s-moving',     icon:'moving'},
+  inspecting: {label:'검사 중',        desc:'나선형 표면 스캔 진행 중...',           cls:'s-inspecting', icon:'inspecting'},
+  pass:       {label:'이상 없음',      desc:'합격 판정 — 합격존으로 이동 중',        cls:'s-pass',       icon:'pass'},
+  defect:     {label:'불량 감지',      desc:'불량품 확인 후 확인 버튼을 눌러주세요', cls:'s-defect',     icon:'defect'},
+  estop:      {label:'비상 정지',      desc:'비상정지 — 복구 버튼을 눌러주세요',      cls:'s-defect',     icon:'defect'},
+  safe_stop:  {label:'보호 정지',      desc:'외부 충격 감지 — 보호정지 해제 버튼을 눌러주세요', cls:'s-defect', icon:'defect'},
+  recovering:    {label:'복구 중',    desc:'로봇 복구 중입니다...',                           cls:'s-inspecting', icon:'inspecting'},
+  recovery_mode: {label:'복구 모드',  desc:'조그로 외력 제거 후 "복구 완료" 버튼을 누르세요', cls:'s-moving',     icon:'moving'},
+};
+let lastDefectId=null, lastState=null;
+const PAGE_LOAD_TIME = Date.now(); // 페이지 로드 시각 — 이후 발생한 defect만 팝업
+
+// state 변경 → ROS 워치독 갱신 (state도 ROS 브리지가 쓰는 값)
+onValue(ref(rtdb, DB_PATHS.state), snap => {
+  const s=snap.val(); if(!s) return;
+  resetRosWd();
+  if(s===lastState) return;
+  lastState=s; applyState(s);
+});
+
+onValue(ref(rtdb, DB_PATHS.stats), snap => {
+  const d=snap.val(); if(!d) return;
+  document.getElementById('cnt-total').textContent=d.total??0;
+  document.getElementById('cnt-pass').textContent =d.passed??0;
+  document.getElementById('cnt-fail').textContent =d.failed??0;
+  const r=d.total>0?Math.round(d.passed/d.total*1000)/10:null;
+  document.getElementById('cnt-rate').textContent=r!==null?r+'%':'—';
+});
+
+// onChildAdded: push() 자동키 구조 대응
+// Firebase push 키의 앞 32비트가 ms 타임스탬프 → PAGE_LOAD_TIME과 비교
+onChildAdded(ref(rtdb, DB_PATHS.defect), snap => {
+  const d = snap.val(); if(!d) return;
+  const key = snap.key;
+  // push 키에서 타임스탬프 추출 (Firebase push key = 8byte base64 timestamp + random)
+  const keyTs = parseInt(key, 36) >> 0;  // 근사값이므로 아래 방식 사용
+  // 더 정확한 방법: triggeredAt 있으면 그걸, 없으면 push key timestamp 디코딩
+  const BASE64 = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+  let ts = 0;
+  for(let i = 0; i < 8; i++) ts = ts * 64 + BASE64.indexOf(key[i]);
+  const isNew = ts > PAGE_LOAD_TIME;
+  if(isNew) {
+    // 페이지 켜진 후 새로 발생한 불량 → 팝업
+    showDefectPopup(d, key);
+  } else {
+    // 과거 기록 → 팝업 없이 로그에만 저장
+    defectLogs.push({
+      key,
+      data: {
+        date:      d.date || '—',
+        time:      d.time || '—',
+        errorRate: d.errorRate || '—',
+      },
+      storageUrl: d.storageUrl || null,
+    });
+  }
+});
+
+// onValue joints 수신할 때 슬라이더도 같이 업데이트
+onValue(ref(rtdb, DB_PATHS.joints), snap => {
+  const d=snap.val(); if(!d) return;
+  resetRosWd();
+  renderCurCells('joint-cur', JOINT_DEFS, d);
+  Object.keys(d).forEach(k => { if(k!=='updatedAt') curJoints[k]=d[k]; });
+  jointsFromFirebase = true;
+  updateJogCurDisplay('joint');
+
+  // ★ 슬라이더 동기화 — 사용자가 조작 중이면 덮어쓰지 않음
+  if(!sliderJointLocked){
+    for(let i=1;i<=6;i++){
+      const sl = document.getElementById('j-sl-'+i);
+      const vl = document.getElementById('jv'+i);
+      if(sl && d['j'+i] !== undefined){
+        sl.value = d['j'+i].toFixed(1);
+        vl.textContent = d['j'+i].toFixed(1)+'°';
+      }
+    }
+  }
+});
+
+onValue(ref(rtdb, DB_PATHS.task), snap => {
+  resetRosWd();
+  const d=snap.val(); if(!d) return;
+  renderCurCells('task-cur', TASK_DEFS, d);
+  ['x','y','z','rx','ry','rz'].forEach(k => { if(d[k]!==undefined) curTask[k]=d[k]; });
+  updateJogCurDisplay('task');
+  taskFromFirebase = true;
+  // ★ 슬라이더 동기화 — 사용자가 조작 중이면 덮어쓰지 않음
+  if(!sliderTaskLocked){
+    ['x','y','z','rx','ry','rz'].forEach(k => {
+      const sl = document.getElementById('t-sl-'+k);
+      const vl = document.getElementById('tv-'+k);
+      if(sl && d[k] !== undefined){
+        sl.value = d[k];
+        if(vl) vl.textContent = parseFloat(d[k]).toFixed(1) + ((['rx','ry','rz'].includes(k))?'°':'mm');
+      }
+    });
+  }
+});
+
+/* ══════════════════════════════════════════════════
+   명령 전송
+══════════════════════════════════════════════════ */
+async function sendCommand(cmd) {
+  try { await set(ref(rtdb,DB_PATHS.command),{cmd,sentAt:Date.now()}); }
+  catch(e){console.error(e)}
+}
+async function sendControl(type,payload) {
+  try {
+    await set(ref(rtdb,DB_PATHS.control),{type,payload,sentAt:Date.now()});
+  } catch(e){console.error(e)}
+}
+// 인라인 onclick에서 접근할 수 있도록 전역 등록
+window.sendCommand = sendCommand;
+window.sendControl = sendControl;
+
+/* ══════════════════════════════════════════════════
+   UI 함수
+══════════════════════════════════════════════════ */
+function applyState(k) {
+  const m=SM[k]||SM.idle;
+  document.body.className=m.cls;
+  document.getElementById('slabel').textContent=m.label;
+  document.getElementById('sdesc').textContent=m.desc;
+  document.getElementById('upd').textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  ['idle','moving','inspecting','pass','defect'].forEach(ic=>
+    document.getElementById('ic-'+ic).style.display=ic===m.icon?'':'none');
+  const ring=document.getElementById('orb-ring');
+  k==='inspecting'?ring.classList.add('spin'):ring.classList.remove('spin');
+  document.getElementById('btn-start').disabled=k!=='idle';
+  document.getElementById('btn-stop').disabled=k==='idle';
+  // defect는 showDefectPopup에서 key와 함께 타임라인에 추가하므로 여기서는 제외
+  if(['moving','inspecting','pass'].includes(k)) addTimeline(m.label, k);
+}
+
+function addTimeline(text,cls) {
+  const tl=document.getElementById('timeline');
+  tl.querySelector('.tl-empty')?.remove();
+  const ts=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  const item=document.createElement('div');
+  item.className = 'tl-item';
+  item.innerHTML=`<div class="tl-dot ${cls}"></div><div class="tl-text">${text}</div><div class="tl-ts">${ts}</div>`;
+  tl.prepend(item);
+  while(tl.children.length>50) tl.lastChild.remove();
+}
+
+// 불량 감지 전용 타임라인 — Firebase key로 정확히 매칭
+function addDefectTimeline(text, key) {
+  const tl=document.getElementById('timeline');
+  tl.querySelector('.tl-empty')?.remove();
+  const ts=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  const item=document.createElement('div');
+  item.className = 'tl-item defect-log';
+  item.title = '클릭하면 3D 뷰 다시 보기';
+  item.addEventListener('click', () => {
+    const idx = defectLogs.findIndex(l => l.key === key);
+    openDefectLog(idx >= 0 ? idx : defectLogs.length - 1);
+  });
+  item.innerHTML=`<div class="tl-dot defect"></div><div class="tl-text">${text}</div><div class="tl-ts">${ts}</div>`;
+  tl.prepend(item);
+  while(tl.children.length>50) tl.lastChild.remove();
+}
+
+// 불량 로그 저장소 (로그 클릭 → 3D 뷰 복원용)
+const defectLogs = [];
+
+function showDefectPopup(d, key='') {
+  const now = new Date();
+  document.getElementById('mts').innerHTML = now.toLocaleDateString('ko-KR')+'<br/>'+now.toLocaleTimeString('ko-KR');
+  document.getElementById('msub').textContent = `오차율 ${d.errorRate||'—'} — 불량품 감지`;
+  document.getElementById('m-date').textContent = d.date || now.toLocaleDateString('ko-KR');
+  document.getElementById('m-time').textContent = d.time || now.toLocaleTimeString('ko-KR');
+
+  // 오차율 게이지
+  const rate = parseFloat(d.errorRateNum||d.errorRate)||0;
+  const arc  = document.getElementById('arc');
+  arc.style.strokeDashoffset = 251.2-(Math.min(rate,100)/100)*251.2;
+  arc.style.stroke = rate>5?'var(--rose)':rate>2?'var(--amber)':'var(--lime)';
+  document.getElementById('m-rate-num').textContent = d.errorRate||'—';
+
+  // DB 저장 상태
+  const mdb = document.getElementById('mdb');
+  mdb.textContent = '저장 완료'; mdb.className = 'mv mono mdb';
+
+  // ★ Firebase defect 데이터에서 storageUrl을 받아 iframe에 로드
+  const ph = document.getElementById('mimgph');
+  const iframe = document.getElementById('defect-iframe');
+  const link3d = document.getElementById('m-3d-link');
+
+  ph.style.display = 'flex';
+  iframe.style.display = 'none';
+
+  const url = d.storageUrl || null;
+  if(url) {
+    link3d.href = url;
+    link3d.style.opacity = '1';
+    iframe.src = url;
+    iframe.onload = () => { ph.style.display='none'; iframe.style.display='block'; };
+    iframe.onerror = () => { ph.innerHTML='<span style="color:var(--rose);font-family:var(--mono);font-size:12px;">3D 뷰 로드 실패</span>'; };
+  } else {
+    ph.innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:12px;">3D URL 수신 대기 중...</span>';
+    link3d.href='#'; link3d.style.opacity='0.4';
+  }
+
+  // 팝업 열기
+  document.getElementById('mbg').classList.add('open');
+
+  // defectLogs에 저장 (로그 클릭 → 복원용)
+  defectLogs.push({
+    key,
+    data: {
+      date:      d.date || now.toLocaleDateString('ko-KR'),
+      time:      d.time || now.toLocaleTimeString('ko-KR'),
+      errorRate: d.errorRate || '—',
+    },
+    storageUrl: url,
+  });
+  if(defectLogs.length > 100) defectLogs.shift();
+
+  // 타임라인에 클릭 가능한 불량 항목 추가 (key로 매칭)
+  addDefectTimeline('불량 감지', key);
+}
+
+async function saveDefectLog(ts, defectData, traces) {
+  try {
+    if(!fsdb) return null;
+    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const docRef = await addDoc(collection(fsdb, DEFECT_LOGS_COL), {
+      timestamp:  ts,
+      date:       defectData.date || new Date().toLocaleDateString('ko-KR'),
+      time:       defectData.time || new Date().toLocaleTimeString('ko-KR'),
+      errorRate:  defectData.errorRate || '—',
+      createdAt:  new Date().toISOString(),
+    });
+    return docRef.id;
+  } catch(e) {
+    console.error('Firestore 저장 실패:', e);
+    return null;
+  }
+}
+
+// 불량 로그 클릭 → 3D 뷰 팝업 재오픈
+function openDefectLog(logIndex) {
+  const log = defectLogs[logIndex];
+  if(!log) return;
+  
+  document.getElementById('mbg').classList.add('open');
+  document.getElementById('m-date').textContent = log.data.date||'—';
+  document.getElementById('m-time').textContent = log.data.time||'—';
+  document.getElementById('m-rate-num').textContent = log.data.errorRate||'—';
+  document.getElementById('mts').innerHTML = log.data.date+'<br/>'+log.data.time;
+  document.getElementById('msub').textContent = `저장된 불량 로그 — ${log.data.errorRate||'—'}`;
+
+  // ★ storageUrl로 iframe 로드
+  const ph = document.getElementById('mimgph');
+  const iframe = document.getElementById('defect-iframe');
+  const link3d = document.getElementById('m-3d-link');
+
+  ph.style.display = 'flex';
+  iframe.style.display = 'none';
+
+  if(log.storageUrl) {
+    link3d.href = log.storageUrl;
+    link3d.style.opacity = '1';
+    iframe.src = log.storageUrl;
+    iframe.onload = () => { ph.style.display='none'; iframe.style.display='block'; };
+  } else {
+    ph.innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:12px;">저장된 URL 없음</span>';
+    link3d.href='#'; link3d.style.opacity='0.4';
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   현재값 렌더링
+══════════════════════════════════════════════════ */
+const JOINT_DEFS=[
+  {key:'j1',label:'J1',unit:'°'},{key:'j2',label:'J2',unit:'°'},
+  {key:'j3',label:'J3',unit:'°'},{key:'j4',label:'J4',unit:'°'},
+  {key:'j5',label:'J5',unit:'°'},{key:'j6',label:'J6',unit:'°'},
+];
+const TASK_DEFS=[
+  {key:'x', label:'X',  unit:'mm'},{key:'y', label:'Y',  unit:'mm'},
+  {key:'z', label:'Z',  unit:'mm'},{key:'rx',label:'RX', unit:'°'},
+  {key:'ry',label:'RY', unit:'°'}, {key:'rz',label:'RZ', unit:'°'},
+];
+function renderCurCells(id,defs,data) {
+  document.getElementById(id).innerHTML=defs.map(({key,label,unit})=>{
+    const v=data?.[key],isNum=typeof v==='number';
+    return `<div class="cur-cell"><span class="cur-lbl">${label}</span><span class="cur-val${isNum?'':' stale'}">${isNum?v.toFixed(1)+unit:'—'}</span></div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   탭 전환
+══════════════════════════════════════════════════ */
+window.switchTab=function(tab){
+  ['joint','task'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('pane-'+t).classList.toggle('active',t===tab);
+  });
+};
+
+/* ══════════════════════════════════════════════════
+   이동 명령
+══════════════════════════════════════════════════ */
+window.sendJoint=function(){
+  const vals={};
+  for(let i=1;i<=6;i++) vals['j'+i]=parseFloat(document.getElementById('j-sl-'+i).value);
+  vals.vel=parseFloat(document.getElementById('j-vel').value)||30;
+  vals.acc=parseFloat(document.getElementById('j-acc').value)||60;
+  sendControl('joint',vals);
+  // 이동 명령 후 2초 뒤 lock 해제 (로봇 이동 완료 대기)
+  clearTimeout(_jLockTimer);
+  _jLockTimer = setTimeout(()=>{ sliderJointLocked=false; }, 2000);
+};
+window.sendTask=function(){
+  const vals={};
+  ['x','y','z','rx','ry','rz'].forEach(k=>vals[k]=parseFloat(document.getElementById('t-sl-'+k).value));
+  vals.vel=parseFloat(document.getElementById('t-vel').value)||100;
+  vals.acc=parseFloat(document.getElementById('t-acc').value)||200;
+  sendControl('task',vals);
+  // 이동 명령 후 2초 뒤 lock 해제 (로봇 이동 완료 대기)
+  clearTimeout(_tLockTimer);
+  _tLockTimer = setTimeout(()=>{ sliderTaskLocked=false; }, 2000);
+};
+window.sendGripper=function(a){sendControl('gripper',{action:a});};
+window.sendHome=function(){sendControl('joint',{...HOME_JOINTS,vel:20,acc:40});};
+// 로봇 상태 코드 → 복구 버튼 활성/비활성
+onValue(ref(rtdb, DB_PATHS.robotState), snap => {
+  const code = snap.val();  // null: 브릿지 초기화 중, 숫자: 실제 로봇 상태 코드
+  const btnRecover  = document.getElementById('btn-recover');
+  const btnSafe     = document.getElementById('btn-safe-reset');
+  const btnRecovery = document.getElementById('btn-recovery-mode');
+  if (!btnRecover || !btnSafe) return;
+  // code === null 이면 브릿지 초기 동기화 전 → 전부 비활성 유지
+  const enableRecover = (code === 3 || code === 6 || code === 9 || code === 10);  // 비상정지/서보OFF → 서보ON 복구
+  const enableSafeReset = (code === 5);                // 보호정지 → 해제 + 복구모드
+  btnRecover.disabled          = !enableRecover;
+  btnRecover.style.opacity     = enableRecover   ? '1' : '0.35';
+  btnRecover.style.cursor      = enableRecover   ? 'pointer' : 'not-allowed';
+  btnSafe.disabled             = !enableSafeReset;
+  btnSafe.style.opacity        = enableSafeReset ? '1' : '0.35';
+  btnSafe.style.cursor         = enableSafeReset ? 'pointer' : 'not-allowed';
+  if (btnRecovery) {
+    btnRecovery.disabled       = !enableSafeReset;
+    btnRecovery.style.opacity  = enableSafeReset ? '1' : '0.35';
+    btnRecovery.style.cursor   = enableSafeReset ? 'pointer' : 'not-allowed';
+  }
+});
+
+window.sendRecover = function() {
+  if (!confirm('서보 ON 복구를 시도합니다.\n비상정지 버튼이 해제되어 있는지 확인하세요.')) return;
+  sendControl('recover', {});
+};
+window.sendSafeStopReset = function() {
+  if (!confirm('보호정지를 해제합니다.\n외력이 제거되었는지 확인하세요.')) return;
+  sendControl('safe_stop_reset', {});
+};
+
+// 복구 모드 진입 (보호정지 중 저속 조그로 외력 제거)
+window.sendRecoveryModeOn = function() {
+  if (!confirm('복구 모드로 진입합니다.\n조그 패널로 로봇을 저속 이동해 외력을 제거하세요.\n(속도 자동 제한 적용)')) return;
+  sendControl('recovery_mode_on', {});
+};
+
+// 복구 모드 해제 → 자율 모드 복귀 + 보호정지 해제
+window.sendRecoveryModeOff = function() {
+  sendControl('recovery_mode_off', {});
+};
+
+// robot/recovery_mode 리스너 — 배너 표시/숨김
+onValue(ref(rtdb, DB_PATHS.recoveryMode), snap => {
+  const d = snap.val();
+  const panel = document.getElementById('recovery-panel');
+  const msgEl = document.getElementById('recovery-msg');
+  if (!panel) return;
+  if (d && d.active) {
+    panel.style.display = 'flex';
+    if (msgEl) msgEl.textContent = d.msg || '';
+    window._recoveryModeActive = true;
+  } else {
+    panel.style.display = 'none';
+    window._recoveryModeActive = false;
+  }
+});
+
+window.sendEstop=function(){
+  if(!confirm('비상정지를 실행하시겠습니까?\n로봇이 즉시 정지합니다.')) return;
+  sendControl('estop',{});
+};
+
+/* ══════════════════════════════════════════════════
+   조그 (± 이동) 기능
+   - 현재 Firebase robot/joints / robot/task 값을 기준으로
+     선택한 축에 스텝만큼 더하거나 빼서 즉시 sendControl
+══════════════════════════════════════════════════ */
+
+// 현재값 캐시 (Firebase 수신 시 갱신)
+const curJoints = {j1:0,j2:0,j3:90,j4:0,j5:90,j6:0};
+const curTask   = {x:0,y:0,z:400,rx:0,ry:0,rz:0};
+let jointsFromFirebase = false;  // Firebase에서 실제 값을 받았는지 여부
+let taskFromFirebase   = false;
+let sliderJointLocked  = false;  // 사용자가 조인트 슬라이더 조작 중 → Firebase 덮어쓰기 차단
+let sliderTaskLocked   = false;  // 사용자가 태스크 슬라이더 조작 중 → Firebase 덮어쓰기 차단
+let _jLockTimer = null, _tLockTimer = null;
+
+// 선택된 축
+let selJointAxis = null;  // 'j1'~'j6'
+let selTaskAxis  = null;  // 'x'~'rz'
+
+const JOINT_AXES = ['j1','j2','j3','j4','j5','j6'];
+const TASK_AXES  = [
+  {key:'x',unit:'mm'},{key:'y',unit:'mm'},{key:'z',unit:'mm'},
+  {key:'rx',unit:'°'},{key:'ry',unit:'°'},{key:'rz',unit:'°'},
+];
+
+function buildAxisChips() {
+  // 조인트 축 칩
+  const jc = document.getElementById('j-axis-chips');
+  JOINT_AXES.forEach(ax=>{
+    const chip=document.createElement('div');
+    chip.className='axis-chip'; chip.textContent=ax.toUpperCase(); chip.dataset.ax=ax;
+    chip.onclick=()=>{
+      selJointAxis=ax;
+      jc.querySelectorAll('.axis-chip').forEach(c=>c.classList.toggle('sel',c.dataset.ax===ax));
+      updateJogCurDisplay('joint');
+    };
+    jc.appendChild(chip);
+  });
+  // 태스크 축 칩
+  const tc = document.getElementById('t-axis-chips');
+  TASK_AXES.forEach(({key,unit})=>{
+    const chip=document.createElement('div');
+    chip.className='axis-chip'; chip.textContent=key.toUpperCase(); chip.dataset.ax=key;
+    chip.onclick=()=>{
+      selTaskAxis=key;
+      tc.querySelectorAll('.axis-chip').forEach(c=>c.classList.toggle('sel',c.dataset.ax===key));
+      updateJogCurDisplay('task');
+      // 스텝 뱃지 단위 갱신
+      const isRot=['rx','ry','rz'].includes(key);
+      const step=isRot?JOG_STEP_ROT:JOG_STEP_LIN;
+      const u=isRot?'°':'mm';
+      document.getElementById('t-step-badge').textContent=`${step}${u}/step`;
+    };
+    tc.appendChild(chip);
+  });
+}
+
+function updateJogCurDisplay(mode) {
+  if(mode==='joint') {
+    const el=document.getElementById('j-jog-cur');
+    if(!selJointAxis){ el.className='jog-cur no-sel'; el.textContent='축을 선택하세요'; return; }
+    const v=curJoints[selJointAxis]??0;
+    el.className='jog-cur';
+    el.textContent=`${selJointAxis.toUpperCase()}  ${v.toFixed(1)}°`;
+  } else {
+    const el=document.getElementById('t-jog-cur');
+    if(!selTaskAxis){ el.className='jog-cur no-sel'; el.textContent='축을 선택하세요'; return; }
+    const v=curTask[selTaskAxis]??0;
+    const def=TASK_AXES.find(a=>a.key===selTaskAxis);
+    el.className='jog-cur';
+    el.textContent=`${selTaskAxis.toUpperCase()}  ${v.toFixed(1)}${def?.unit||''}`;
+  }
+}
+
+function showJogFeedback(mode, text) {
+  const el=document.getElementById(mode==='joint'?'j-jog-fb':'t-jog-fb');
+  el.textContent=text; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1200);
+}
+
+// ── JogH2r 조그 엔진 ────────────────────────────────
+// 버튼 누르는 동안 연속 이동, 떼면 즉시 정지
+// 일반 모드 / 복구 모드 모두 동일하게 JogH2r 사용
+
+// JogH2r 축 번호 맵
+const JOG_AXIS_MAP = {
+  j1:0, j2:1, j3:2, j4:3, j5:4, j6:5,
+  x:6,  y:7,  z:8, rx:9, ry:10, rz:11
+};
+
+// 모드별 조그 속도
+const JOG_VEL_NORMAL   = 30.0;  // 일반 모드 속도
+const JOG_VEL_RECOVERY = 10.0;  // 복구 모드 속도 (저속)
+const JOG_RECOVERY_INTERVAL = 300; // 복구 모드 반복 전송 간격 (ms) — 한 스텝 이동 완료 전 다음 목표
+
+let jogActive = false;
+let jogTimer  = null;
+
+function startJog(mode, dir) {
+  if(jogActive) return;
+  const axisKey = mode==='joint' ? selJointAxis : selTaskAxis;
+  if(!axisKey){ showJogFeedback(mode,'⚠ 축을 먼저 선택하세요'); return; }
+
+  jogActive=true;
+  const btnId = mode==='joint'
+    ? (dir==='+'?'j-btn-plus':'j-btn-minus')
+    : (dir==='+'?'t-btn-plus':'t-btn-minus');
+  const btn=document.getElementById(btnId);
+  if(btn) btn.classList.add('holding');
+
+  const axisNum = JOG_AXIS_MAP[axisKey];
+  const vel     = window._recoveryModeActive ? JOG_VEL_RECOVERY : JOG_VEL_NORMAL;
+  const velocity = dir==='+' ? vel : -vel;
+  const payload = { axis: axisNum, velocity, move_reference: 0, recovery_mode: !!window._recoveryModeActive };
+
+  // 즉시 첫 전송
+  sendControl('jog_h2r_start', payload);
+
+  // 복구 모드: movej_h2r가 목표 위치로 이동하는 방식이라 반복 전송 필요
+  if(window._recoveryModeActive) {
+    jogTimer = setInterval(() => {
+      if(jogActive) sendControl('jog_h2r_start', payload);
+    }, JOG_RECOVERY_INTERVAL);
+  }
+
+  const label = window._recoveryModeActive ? '[복구] ' : '';
+  showJogFeedback(mode, `${label}${axisKey.toUpperCase()} ${dir==='+'?'▲':'▼'} 조그 중...`);
+}
+
+function stopJog() {
+  if(!jogActive) return;
+  clearInterval(jogTimer);
+  jogTimer = null;
+  sendControl('jog_h2r_stop', { recovery_mode: !!window._recoveryModeActive });
+  jogActive=false;
+  ['j-btn-plus','j-btn-minus','t-btn-plus','t-btn-minus'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('holding');
+  });
+}
+
+// 버튼에 hold 이벤트 바인딩
+function bindJogBtn(btnId, mode, dir) {
+  const btn=document.getElementById(btnId);
+  if(!btn) return;
+  // Mouse
+  btn.addEventListener('mousedown',  e=>{ e.preventDefault(); startJog(mode,dir); });
+  btn.addEventListener('mouseup',    ()=>stopJog());
+  btn.addEventListener('mouseleave', ()=>stopJog());
+  // Touch (모바일/터치스크린)
+  btn.addEventListener('touchstart', e=>{ e.preventDefault(); startJog(mode,dir); }, {passive:false});
+  btn.addEventListener('touchend',   ()=>stopJog());
+  btn.addEventListener('touchcancel',()=>stopJog());
+}
+
+// 전역 mouseup 안전망 (버튼 밖에서 손을 뗄 때 대비)
+window.addEventListener('mouseup',  ()=>stopJog());
+window.addEventListener('touchend', ()=>stopJog());
+
+/* ══════════════════════════════════════════════════
+   버튼 이벤트 & 초기화
+══════════════════════════════════════════════════ */
+document.getElementById('btn-start').addEventListener('click',()=>sendCommand('00'));
+document.getElementById('btn-stop').addEventListener('click', ()=>sendCommand('stop'));
+document.getElementById('mok').addEventListener('click',()=>document.getElementById('mbg').classList.remove('open'));
+document.getElementById('btn-clear').addEventListener('click',()=>{
+  document.getElementById('timeline').innerHTML='<div class="tl-empty">이벤트 로그가 비워졌습니다</div>';
+});
+
+
+
+/* 슬라이더 생성 */
+const jc=document.getElementById('joint-sliders');
+[1,2,3,4,5,6].forEach(i=>{
+  jc.innerHTML+=`<div class="s-row">
+    <span class="s-lbl">J${i}</span>
+    <input type="range" id="j-sl-${i}" min="-180" max="180" step="0.5" value="${[0,0,90,0,90,0][i-1]}"
+      oninput="document.getElementById('jv${i}').textContent=parseFloat(this.value).toFixed(1)+'°';
+               sliderJointLocked=true; clearTimeout(_jLockTimer);
+               _jLockTimer=setTimeout(()=>{sliderJointLocked=false;},3000);"/>
+    <span class="s-val" id="jv${i}">${[0,0,90,0,90,0][i-1]}.0°</span>
+  </div>`;
+});
+const tc=document.getElementById('task-sliders');
+[
+  {k:'x', l:'X',  mn:-800,mx:800,  st:1,   u:'mm',d:0},
+  {k:'y', l:'Y',  mn:-800,mx:800,  st:1,   u:'mm',d:0},
+  {k:'z', l:'Z',  mn:0,   mx:1200, st:1,   u:'mm',d:400},
+  {k:'rx',l:'RX', mn:-180,mx:180,  st:0.5, u:'°', d:0},
+  {k:'ry',l:'RY', mn:-180,mx:180,  st:0.5, u:'°', d:0},
+  {k:'rz',l:'RZ', mn:-180,mx:180,  st:0.5, u:'°', d:0},
+].forEach(ax=>{
+  tc.innerHTML+=`<div class="s-row">
+    <span class="s-lbl">${ax.l}</span>
+    <input type="range" id="t-sl-${ax.k}" min="${ax.mn}" max="${ax.mx}" step="${ax.st}" value="${ax.d}"
+      oninput="document.getElementById('tv-${ax.k}').textContent=parseFloat(this.value).toFixed(1)+'${ax.u}';
+               sliderTaskLocked=true; clearTimeout(_tLockTimer);
+               _tLockTimer=setTimeout(()=>{sliderTaskLocked=false;},3000);"/>
+    <span class="s-val" id="tv-${ax.k}">${ax.d}${ax.u}</span>
+  </div>`;
+});
+
+/* 초기화 */
+renderCurCells('joint-cur', JOINT_DEFS, null);
+renderCurCells('task-cur',  TASK_DEFS,  null);
+buildAxisChips();
+
+/* 조그 버튼 hold 바인딩 */
+bindJogBtn('j-btn-minus','joint','-');
+bindJogBtn('j-btn-plus', 'joint','+');
+bindJogBtn('t-btn-minus','task', '-');
+bindJogBtn('t-btn-plus', 'task', '+');
+
+</script>
+</body>
+</html>
