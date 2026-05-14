@@ -120,7 +120,7 @@ Cubic Spline 경로 분석: 의심 구간 전후의 정상 궤적을 3차 스플
 
 
 5) 데이터 관리 및 디지털 트윈
-6) 
+
 Realtime Database: 브릿지 스크립트(05_01_ros_firebase_bridge.py)를 통해 로봇의 조인트 상태, 검수 진행률, TCP 좌표를 실시간으로 웹/모바일과 동기화합니다.
 
 Cloud Storage: firebase_04.py가 불량 발생 시 Plotly 기반의 인터랙티브 3D 궤적 리포트(HTML)를 렌더링하여 클라우드에 영구 보관합니다.
@@ -128,7 +128,7 @@ Cloud Storage: firebase_04.py가 불량 발생 시 Plotly 기반의 인터랙티
 
 
 6) 향후 개선 및 기대 효과
-7) 
+
 안전성 강화: 긴급 정지(Emergency Stop) 및 장애물 회피(H2R 모드) 로직의 정교화.
 
 확장성: 투명 사출물 외에도 비전 센서 활용이 어려운 고반사 재질(금속 등)의 표면 검수로 확장 가능.
