@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로봇 제어 & 디지털 트윈 엔지니어 기술 포트폴리오</title>
+    <style>
+        /* 기본 디자인 시스템 정의 */
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --color-brand: #4f46e5;
+            --color-brand-light: #eeebff;
+            --color-success: #10b981;
+            --color-success-light: #ecfdf5;
+            --color-warn: #f59e0b;
+            --color-warn-light: #fffbeb;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 스타일 */
+        header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            color: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        header .tag {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #e0e7ff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        header .subtitle {
+            font-size: 1.1rem;
+            color: #c7d2fe;
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+
+        header .meta-info {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+            font-size: 0.95rem;
+            color: #e0e7ff;
+        }
+
+        header .meta-info span {
+            margin-right: 25px;
+            display: inline-block;
+        }
+
+        header .meta-info strong {
+            color: #ffffff;
+        }
+
+        /* 섹션 공통 스타일 */
+        section {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 25px;
+            font-weight: 700;
+            border-left: 5px solid var(--color-brand);
+            padding-left: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        /* 담당 업무 리스트 스타일 */
+        .role-list {
+            list-style: none;
+        }
+
+        .role-item {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .role-item h3 {
+            font-size: 1.1rem;
+            color: var(--color-brand);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .role-item p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* 과제 및 트러블슈팅 케이스 카드 */
+        .case-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .case-header {
+            background-color: #f1f5f9;
+            padding: 15px 25px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .case-header h3 {
+            font-size: 1.15rem;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .case-body {
+            padding: 25px;
+        }
+
+        .sub-section {
+            margin-bottom: 18px;
+        }
+
+        .sub-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .badge-problem {
+            background-color: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fee2e2;
+        }
+
+        .badge-action {
+            background-color: var(--color-brand-light);
+            color: var(--color-brand);
+            border: 1px solid #e0e7ff;
+        }
+
+        .badge-result {
+            background-color: var(--color-success-light);
+            color: var(--color-success);
+            border: 1px solid #d1fae5;
+        }
+
+        .case-body p {
+            font-size: 0.95rem;
+            padding-left: 5px;
+        }
+
+        .highlight {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* 성과 지표 테이블 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            font-size: 0.95rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        .text-success {
+            color: var(--color-success);
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- 포트폴리오 메인 헤더 -->
+    <header>
+        <span class="tag">Technical Portfolio</span>
+        <h1>로봇 제어 및 디지털 트윈 엔지니어 포트폴리오</h1>
+        <div class="subtitle">관절 토크 데이터 기반 능동형 곡면 검사 및 무지연 3D 데이터 스트리밍 아키텍처 수립</div>
+        <div class="meta-info">
+            <span><strong>프로젝트:</strong> 토크 센서와 3D Point Cloud를 활용한 능동형 표면 탐색 로봇</span>
+            <span><strong>소속 팀:</strong> TEAM 더듬이</span>
+            <span><strong>제어 로봇:</strong> Doosan Robotics M0609 (ROS 2 Humble)</span>
+        </div>
+    </header>
+
+    <!-- 프로젝트 기술 개요 -->
+    <section id="overview">
+        <h2>프로젝트 기술 개요</h2>
+        <p>
+            전통적인 카메라 기반 비전 시스템은 투명 사출물이나 빛 반사가 심한 광학적 한계 환경에서 빛의 굴절 및 산란으로 인해 심각한 결함 오탐률을 나타냅니다. 
+            본 프로젝트는 이러한 한계를 원천적으로 극복하기 위해 비전 센서에 의존하지 않고, <strong>협동로봇 고유의 조인트 내장 정밀 토크 센서 데이터와 유연 순응 제어(Compliance Control)를 결합하여 곡면을 물리적으로 촉진하며 불량을 식별하는 접촉식 지능형 공정 자동화 시스템</strong>을 구축한 과제입니다.
+        </p>
+    </section>
+
+    <!-- 핵심 담당 업무 및 기술 스택 -->
+    <section id="my-roles">
+        <h2>핵심 담당 업무 (My Roles & Contributions)</h2>
+        <p>전체 시스템 아키텍처 중 로봇 하드웨어의 물리적 안전 구동을 보장하는 기하학적 궤적 제어, 결함 판단 로직 설계, 그리고 디지털 트윈 인터페이스의 연산 최적화를 전담하였습니다.</p>
+        <ul class="role-list">
+            <li class="role-item">
+                <h3>1. 로봇 제어부: 곡면 추종을 위한 정밀 원주 구속제어 (Orientation Constraint Control)</h3>
+                <p>3차원 구형 돔 표면 연속 주행 시, 검사 툴의 포스/토크 측정축이 대상물 표면의 법선 벡터(곡률 중심)와 상시 90도 수직을 유지하게 강제하는 원주구속 제어 아키텍처를 구현하고 하드웨어 제어 최적화를 담당했습니다.</p>
+            </li>
+            <li class="role-item">
+                <h3>2. 데이터 분석부: 외부 토크 변량 기반 실시간 불량 판단 알고리즘 설계</h3>
+                <p>로봇이 순응 제어로 표면을 가압 주행할 때 크랙, 돌기 등 미세 결함을 통과하는 순간 조인트에 전달되는 물리적 외력(External Torque)의 순간 변량 및 변화율(Rate) 스파이크를 추출하여 판정 신뢰도를 극대화하는 예외 처리 필터를 개발했습니다.</p>
+            </li>
+            <li class="role-item">
+                <h3>3. 시각화부: 무지연 사용자용 실시간 3D 디지털 트윈 렌더링 파이프라인 개발</h3>
+                <p>로봇 제어 주기 단위로 적층 수집되는 수만 개의 3차원 공간 좌표와 결함 매핑 데이터를 메모리 병목 없이 사용자 대시보드에 다차원 그래픽으로 연동하는 데이터 스트리밍 파이프라인을 구축했습니다.</p>
+            </li>
+        </ul>
+    </section>
+
+    <!-- 엔지니어링 문제 해결 케이스 (Troubleshooting Deep Dive) -->
+    <section id="troubleshooting">
+        <h2>기술적 당면 과제 및 트러블슈팅 (Troubleshooting Deep Dive)</h2>
+        
+        <!-- Case 1 -->
+        <div class="case-card">
+            <div class="case-header">
+                <h3>Case 01. 원주구속 제어 시 손목 관절(J5, J6) 특이점 진입 및 제어기 탈조 차단</h3>
+            </div>
+            <div class="case-body">
+                <div class="sub-section">
+                    <span class="badge badge-problem">발생한 문제점 (Issue)</span>
+                    <p>
+                        돔 곡면 스캔 시 기본 원호 보간(<span class="highlight">ori=0</span>) 모드를 적용하면 툴 각도가 공간에 선형 구속되어 접촉 각도가 무너지고 오판정률이 40%를 상회했습니다. 
+                        이를 해결하고자 도구 축을 완벽히 동기화하는 원주구속(<span class="highlight">ori=2</span>) 제어를 삽입하자, 360도 전주 주행 과정 중 특정 위도 구간에서 J5 및 J6 손목 관절의 누적 회전 오프셋이 한계에 도달하는 기계적 특이점(Singularity) 현상이 발생했습니다. 
+                        이로 인해 관절 구동 속도가 폭주하여 두산 로봇 제어기 단에서 하드웨어 안전을 위해 <span class="highlight">알람 2007 (과토크 및 제어 경고)</span>을 발생시키며 로봇이 비상 정지되는 크래시가 유발되었습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-action">시도 및 해결 방안 (Action)</span>
+                    <p>
+                        360도 일괄 연속 비행 궤적을 폐기하고, 돔 구조물의 높이에 따라 스캔 경로를 총 <span class="highlight">5개 층의 위도 레이어(Layer) 트랙</span>으로 정밀하게 분할 정의했습니다. 
+                        관절 꼬임 오프셋을 수학적으로 상쇄시키기 위해 <strong>홀수 레이어는 시계 방향(CW), 짝수 레이어는 반시계 방향(CCW)으로 교차 주행</strong>하도록 모션 시퀀스 제어 스크립트를 개편했습니다. 
+                        동시에 층간 이동 시 물리적 충격과 왜곡 데이터 수집을 유발하던 수직 리프팅(<span class="highlight">LIFT_HEIGHT</span>) 동작을 배제하고, 표면에 밀착 주행 연계가 가능하도록 블렌딩 반경(<span class="highlight">r=5.0</span>)을 결합한 연속 경로(Continuous Path) 제어로 전환했습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-result">엔지니어링 결과 (Result)</span>
+                    <p>
+                        로봇 끝단(TCP)이 스캔 전 구간에서 돔 표면과 정확히 <span class="highlight">90도(&plusmn;0.8&deg; 이내) 직각 평형 상태를 유지</span>하며 유연하게 구르는 곡면 추종을 달성했습니다. 
+                        관절 꼬임 및 특이점 크래시를 전면 제어하여 공정 구동 중 <strong>하드웨어 비상 정지 발생률 0%</strong>를 실현했습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case 2 -->
+        <div class="case-card">
+            <div class="case-header">
+                <h3>Case 02. 진입 구간 물리 노이즈 필터링 및 데이터 직렬화 무결성 확보</h3>
+            </div>
+            <div class="case-body">
+                <div class="sub-section">
+                    <span class="badge badge-problem">발생한 문제점 (Issue)</span>
+                    <p>
+                        로봇이 공정 기동 후 돔 표면으로 최초 하강하여 가압 접촉하는 순간, 순간적인 하강 물리 충격력과 컴플라이언스 유연 제어가 활성화되며 시스템이 주저앉는 과도상태 현상이 결합되었습니다. 
+                        구동 모터의 초기 정지 마찰력까지 겹치면서 스캔 시작 직후 극초반부에 거대한 토크 변량 스파이크 노이즈가 유입되어 정상 표면임에도 결함(NG)으로 오판하는 에러가 발생했습니다. 
+                        또한 소프트웨어단에서 Numpy 배열 연산 결과 도출된 판정 결과가 파이썬 기본 bool 타입이 아닌 <span class="highlight">numpy.bool_</span> 특수 자료형으로 반환되어, JSON 직렬화 에러(<span class="highlight">TypeError: Object of type bool_ is not JSON serializable</span>)가 발생하며 실시간 데이터베이스(Firebase) 전송 세션이 크래시되는 결함도 동반되었습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-action">시도 및 해결 방안 (Action)</span>
+                    <p>
+                        물리적 하드웨어 파라미터를 뒤흔드는 복잡한 예외 필터 대신 제어 시퀀스 레이어에서 노이즈 데이터를 원천 차단하는 기법을 자체 고안했습니다. 
+                        마스터 제어 소프트웨어 노드에 <span class="highlight">IGNORE_START_FRAMES = 20</span> 논리 필터를 내장하여, 진입 기동 후 로봇이 안정적인 타겟 원호 주행 속도 프로파일에 수렴하기 전 <strong>초기 2초 동안은 데이터 수집 및 분석 스위치 자체를 소프트웨어적으로 잠그는 방어 코드</strong>를 연동했습니다. 
+                        또한 DB 업로드 객체 파싱 레이어에 명시적 타입 캐스팅인 <span class="highlight">bool() 내장 함수 래핑</span>을 적용하여 직렬화 예외 오류를 근본적으로 차단했습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-result">엔지니어링 결과 (Result)</span>
+                    <p>
+                        진입 접촉 충격 및 마찰 오차 데이터가 완전히 소거되어 정상 공정 범위 내에서 가압 측정이 가능해졌으며, <strong>수집 필터링 시스템의 결함 NG 판정 신뢰도를 95% 이상으로 안정적 상시 방어</strong>해 냈습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case 3 -->
+        <div class="case-card">
+            <div class="case-header">
+                <h3>Case 03. 대용량 점군 데이터 실시간 동기화 렌더링 부하 제어 및 비교 레이어 구축</h3>
+            </div>
+            <div class="case-body">
+                <div class="sub-section">
+                    <span class="badge badge-problem">발생한 문제점 (Issue)</span>
+                    <p>
+                        로봇 조인트의 실시간 정구학(Forward Kinematics) 3D 연산 좌표와 센싱 점군(Point Cloud) 데이터를 밀리초 단위로 수집·적층하면서 웹 GUI 뷰어에 시각화 프로파일을 동기화해야 했습니다. 
+                        기존의 프레임워크 렌더링 방식은 수만 개의 포인트 데이터가 누적될수록 브라우저가 화면 전체를 매 프레임마다 재드로잉(Re-render)하도록 유도하여 CPU/GPU 메모리 점유율이 폭증하고 결국 웹 세션이 멈추거나 튕기는 프레임 드롭(FPS 저하) 현상이 일어났습니다. 
+                        또한 화면에 로봇의 이동 자취만 단순 표현되어 가동 경로가 기준선(Baseline)에서 물리적으로 얼마나 이탈했는지 운전자가 시각적으로 즉각 대조 식별하기 어려운 아키텍처적 부재가 존재했습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-action">시도 및 해결 방안 (Action)</span>
+                    <p>
+                        웹 그래픽스 최적화를 위해 데이터 시각화 전문 모듈인 Plotly.js 엔진 인터페이스로 아키텍처를 전면 교체했습니다. 
+                        누적 데이터를 매번 새로 연산하는 비효율을 제거하기 위해 <strong>그래프 전체를 다시 그리지 않고 새로 스트리밍되는 꼬리 데이터 점만 기존 캔버스 트레이스 끝에 순차 결합하는 extendTraces 메모리 스트리밍 파이프라인</strong>을 독자 탑재했습니다. 
+                        동시에 화면 내부 레이어를 독립적으로 제어하는 <strong>이중 트레이스(Multi-trace) 설계</strong>를 단행하여, 고정형 기준 경로 레이어(Trace 0) 위에 실시간 누적 주행 레이어(Trace 1)가 독립 레이어로 병합 적층되도록 GUI 렌더링 구조를 고도화했습니다.
+                    </p>
+                </div>
+                <div class="sub-section">
+                    <span class="badge badge-result">엔지니어링 결과 (Result)</span>
+                    <p>
+                        수만 개의 시각 데이터 점 적층 환경 속에서도 레이턴시 및 프레임 다운이 전혀 발생하지 않는 <span class="highlight">무지연(Zero-latency) 실시간 디지털 트윈 GUI</span>를 구현했습니다. 
+                        운전자는 기준선 대비 미세 오차 이탈 여부 및 불량 위치 좌표를 모니터 화면에서 시각적으로 즉각 정밀 판독하는 인터페이스 무결성을 확보했습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 정량적 공정 개선 성과 요약 -->
+    <section id="metrics">
+        <h2>정량적 주요 개선 성과 요약</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>평가 및 개선 지표 (Key Metrics)</th>
+                    <th>기존 아키텍처 (Before)</th>
+                    <th>개선 및 도입 후 (After)</th>
+                    <th>주요 성과 요약</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="highlight">곡면 스캔 탐지 불량 오판정율</td>
+                    <td>40% 초과 (접촉각 뒤틀림 노이즈)</td>
+                    <td class="text-success">5% 미만 달성</td>
+                    <td>정밀 원주구속 및 노이즈 필터 융합 성과</td>
+                </tr>
+                <tr>
+                    <td class="highlight">기계적 특이점 탈조 및 비상 정지율</td>
+                    <td>빈번 발생 (손목 관절 꼬임)</td>
+                    <td class="text-success">0.0% (Zero)</td>
+                    <td>위도별 CW/CCW 레이어 교차 제어 설계 결과</td>
+                </tr>
+                <tr>
+                    <td class="highlight">3D 디지털 트윈 GUI 연산 속도</td>
+                    <td>데이터 누적 시 브라우저 다운</td>
+                    <td class="text-success">무지연 실시간 스트리밍</td>
+                    <td>extendTraces 렌더링 메모리 최적화 성과</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+</div>
+
+<footer>
+    <p>© TECHNICAL PORTFOLIO - ROBOTICS & DIGITAL TWIN SOFTWARE ENGINEERING</p>
+</footer>
+
+</body>
+</html>
