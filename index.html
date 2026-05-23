@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +7,10 @@
     <meta name="description" content="두산 M0609 협동로봇 기반 돔 표면 검사 모션 제어 및 3D 관제 시스템 엔지니어링 포트폴리오">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-
 <body>
     <div class="background-effects">
         <div class="glow-orb top-left"></div>
@@ -39,7 +35,7 @@
             <h1 class="title">더듬이 봇</h1>
             <p class="subtitle">두산 M0609 협동로봇 기반<br><span class="gradient-text">돔 표면 검사 제어 시스템</span></p>
             <p class="description">
-                로봇팔 제어 컴포넌트부터 비정형 구조물 대응 수학 제어 모델, 토크 스파이크 기반 지능형 결함 진단,
+                로봇팔 제어 컴포넌트부터 비정형 구조물 대응 수학 제어 모델, 토크 스파이크 기반 지능형 결함 진단, 
                 그리고 Firebase 비동기 클라우드 파이프라인과 3D 디지털 트윈 관제 시스템까지 아우르는 풀스택 엔지니어링 기록입니다.
             </p>
             <div class="hero-actions">
@@ -92,32 +88,27 @@
                     <div class="card-icon"><i data-lucide="alert-triangle"></i></div>
                     <h3>원주구속 제어 시 조인트 회전 폭주</h3>
                     <p class="problem"><strong>Issue:</strong> 돔 곡면 스캔 시 J6축 각도가 누적되어 꼬임 발생, 제어기 알람 2007 크래시.</p>
-                    <p class="solution"><strong>Solution:</strong> 궤적을 지그재그 교차 주행으로 하드코딩 리팩토링. 홀/짝수 레이어 회전 방향 교차로 꼬임 자동
-                        상쇄.</p>
+                    <p class="solution"><strong>Solution:</strong> 궤적을 지그재그 교차 주행으로 하드코딩 리팩토링. 홀/짝수 레이어 회전 방향 교차로 꼬임 자동 상쇄.</p>
                 </div>
                 <div class="card fade-in-up">
                     <div class="card-icon"><i data-lucide="clock"></i></div>
                     <h3>마스터 노드 비동기 타이밍 미스</h3>
                     <p class="problem"><strong>Issue:</strong> 하드코딩된 sleep() 의존으로 데이터 동기화 파열 및 왜곡 발생.</p>
-                    <p class="solution"><strong>Solution:</strong> ROS 2 이벤트 연동 및 폴링 필터 가중치 이식. 실시간 움직임 플래그 연동으로 대기 제어
-                        최적화.</p>
+                    <p class="solution"><strong>Solution:</strong> ROS 2 이벤트 연동 및 폴링 필터 가중치 이식. 실시간 움직임 플래그 연동으로 대기 제어 최적화.</p>
                 </div>
                 <div class="card fade-in-up">
                     <div class="card-icon"><i data-lucide="compass"></i></div>
                     <h3>행렬 오차 및 짐벌락(Gimbal Lock)</h3>
                     <p class="problem"><strong>Issue:</strong> 회전 행렬 ZYZ 변환 중 도메인 에러 및 로봇 손목 짐벌락 발생.</p>
-                    <p class="solution"><strong>Solution:</strong> 행렬 오차 방지 수치 클리핑 및 짐벌락 방어 분기 필터 내장. 이후 하이브리드 기하 모델로
-                        백트랙 융합.</p>
+                    <p class="solution"><strong>Solution:</strong> 행렬 오차 방지 수치 클리핑 및 짐벌락 방어 분기 필터 내장. 이후 하이브리드 기하 모델로 백트랙 융합.</p>
                 </div>
             </div>
 
             <div class="highlight-box fade-in-up">
                 <h3><i data-lucide="star"></i> 핵심 알고리즘 구현 성과</h3>
                 <ul class="feature-list">
-                    <li><strong>동적 반경 확장 알고리즘:</strong> 타원형 돔 밀착을 위해 점진적 선형 확장 수식(MAX_RADIUS_EXPANSION) 적용. 전 구간 100% 밀착
-                        주행.</li>
-                    <li><strong>RZ 각도 불연속성 상쇄:</strong> 오일러 각 반전에 따른 크래시 방지를 위해 <code>make_continuous</code> 보정 함수 내장.
-                        부드러운 모션 스트리밍 실현.</li>
+                    <li><strong>동적 반경 확장 알고리즘:</strong> 타원형 돔 밀착을 위해 점진적 선형 확장 수식(MAX_RADIUS_EXPANSION) 적용. 전 구간 100% 밀착 주행.</li>
+                    <li><strong>RZ 각도 불연속성 상쇄:</strong> 오일러 각 반전에 따른 크래시 방지를 위해 <code>make_continuous</code> 보정 함수 내장. 부드러운 모션 스트리밍 실현.</li>
                     <li><strong>논스톱 모션 블렌딩:</strong> 모션 간 병목 소거를 위해 블렌딩 파라미터(r=15) 및 강성 테이블 인자 강제 이식 매핑.</li>
                 </ul>
             </div>
@@ -137,8 +128,7 @@
                 </div>
                 <div class="split-col panel highlight-panel">
                     <h3><i data-lucide="check-circle" style="color: #10b981;"></i> 혁신적 대전환 (Paradigm Shift)</h3>
-                    <p>유연 순응 제어(Compliance Control) 중 결함을 밟는 순간 발생하는 <strong>외력 토크 미세 변화율(Torque Rate Spike)</strong>을
-                        포착하는 지능형 진단으로 아키텍처 전면 전환.</p>
+                    <p>유연 순응 제어(Compliance Control) 중 결함을 밟는 순간 발생하는 <strong>외력 토크 미세 변화율(Torque Rate Spike)</strong>을 포착하는 지능형 진단으로 아키텍처 전면 전환.</p>
                 </div>
             </div>
 
@@ -147,8 +137,7 @@
                 <div class="grid-3">
                     <div class="feature-card">
                         <h4>초기 하강 충격 차단</h4>
-                        <p>정지 마찰력 및 과도상태 노이즈 방지를 위해 <code>IGNORE_START_FRAMES = 20</code> 제어벽 구축. 가짜 토크 스파이크 100% 소거.
-                        </p>
+                        <p>정지 마찰력 및 과도상태 노이즈 방지를 위해 <code>IGNORE_START_FRAMES = 20</code> 제어벽 구축. 가짜 토크 스파이크 100% 소거.</p>
                     </div>
                     <div class="feature-card">
                         <h4>비동기 큐 & 스레딩</h4>
@@ -174,22 +163,19 @@
                     <div class="card-icon"><i data-lucide="cloud"></i></div>
                     <h3>Firebase 동기식 블로킹 해소</h3>
                     <p class="problem"><strong>Issue:</strong> 클라우드 전송 지연 시 ROS 2 토픽 구독 스레드 블로킹으로 모션 레이턴시 발생.</p>
-                    <p class="solution"><strong>Solution:</strong> 비동기 메모리 큐 및 독립 데몬 스레드(Worker Thread) 아키텍처 구축. 지연율 0%의
-                        30Hz 고주파 생중계 파이프라인 완성.</p>
+                    <p class="solution"><strong>Solution:</strong> 비동기 메모리 큐 및 독립 데몬 스레드(Worker Thread) 아키텍처 구축. 지연율 0%의 30Hz 고주파 생중계 파이프라인 완성.</p>
                 </div>
                 <div class="card fade-in-up">
                     <div class="card-icon"><i data-lucide="monitor"></i></div>
                     <h3>3D 렌더링 메모리 크래시 타파</h3>
                     <p class="problem"><strong>Issue:</strong> Three.js 재렌더링 오버헤드로 인한 웹 세션 크래시 및 UI 락 현상.</p>
-                    <p class="solution"><strong>Solution:</strong> Plotly.js 교체 및 <code>extendTraces</code> 스트리밍 기법 도입.
-                        1.5만 개 점군에서도 60FPS 무지연 디지털 트윈 시각화 달성.</p>
+                    <p class="solution"><strong>Solution:</strong> Plotly.js 교체 및 <code>extendTraces</code> 스트리밍 기법 도입. 1.5만 개 점군에서도 60FPS 무지연 디지털 트윈 시각화 달성.</p>
                 </div>
                 <div class="card fade-in-up">
                     <div class="card-icon"><i data-lucide="layers"></i></div>
                     <h3>이중 트레이스 및 오토 클리어</h3>
                     <p class="problem"><strong>Issue:</strong> 연속 스캔 시 데이터 뒤엉킴 및 기준선 대조 판독 불가.</p>
-                    <p class="solution"><strong>Solution:</strong> 고정 Baseline(Trace 0)과 실시간 자취(Trace 1) 분리. 로봇 스캔 시작
-                        이벤트를 감지해 Trace 1만 <code>Wipe-out</code>하는 이벤트 기반 오토 클리어 연동.</p>
+                    <p class="solution"><strong>Solution:</strong> 고정 Baseline(Trace 0)과 실시간 자취(Trace 1) 분리. 로봇 스캔 시작 이벤트를 감지해 Trace 1만 <code>Wipe-out</code>하는 이벤트 기반 오토 클리어 연동.</p>
                 </div>
             </div>
         </section>
@@ -236,5 +222,4 @@
         });
     </script>
 </body>
-
 </html>
