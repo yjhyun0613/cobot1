@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DSR M0609 — 실시간 관절 토크 모니터</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1e293b;
+  --bg4: #334155;
+  --line: rgba(99,102,241,.2);
+  --line2: rgba(99,102,241,.35);
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --text: #f1f5f9;
+  --sub: #94a3b8;
+  --muted: #64748b;
+  --j1: #ef4444; --j2: #f97316; --j3: #eab308;
+  --j4: #22c55e; --j5: #3b82f6; --j6: #a855f7;
+  --head: 'Noto Sans KR', sans-serif;
+  --mono: 'JetBrains Mono', 'Noto Sans KR', monospace;
+  --r: 12px; --rL: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--head);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── NAVBAR ── */
+.navbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; height: 64px;
+  background: rgba(17,24,39,.85); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line2);
+  box-shadow: 0 2px 20px rgba(99,102,241,.08);
+  flex-shrink: 0;
+}
+.nav-brand { display: flex; align-items: center; gap: 14px; }
+.nav-logo {
+  width: 40px; height: 40px; border: 2px solid var(--accent); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--accent); background: rgba(99,102,241,.1);
+}
+.nav-title { font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: 3px; color: var(--text); }
+.nav-tag { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--bg3); border: 1px solid var(--line2); padding: 2px 8px; border-radius: 4px; }
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.conn-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px; background: var(--bg3); border: 1px solid var(--line2);
+  border-radius: 20px; font-family: var(--mono); font-size: 12px; color: var(--muted);
+  transition: all .3s;
+}
+.conn-pill.ok { border-color: rgba(34,197,94,.4); color: #22c55e; background: rgba(34,197,94,.08); }
+.conn-pill.err { border-color: rgba(239,68,68,.4); color: #ef4444; background: rgba(239,68,68,.08); }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.conn-pill.ok .conn-dot { animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+.nav-clock { font-family: var(--mono); font-size: 22px; color: var(--accent2); letter-spacing: 2px; }
+
+/* ── PAGE ── */
+.page { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── GAUGE ROW ── */
+.gauge-row {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+  padding: 14px 24px; flex-shrink: 0;
+}
+.gauge-card {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, box-shadow .3s;
+}
+.gauge-card:hover { border-color: var(--line2); box-shadow: 0 4px 20px rgba(99,102,241,.1); }
+.gauge-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: var(--r) var(--r) 0 0;
+}
+.gauge-card:nth-child(1)::before { background: var(--j1); }
+.gauge-card:nth-child(2)::before { background: var(--j2); }
+.gauge-card:nth-child(3)::before { background: var(--j3); }
+.gauge-card:nth-child(4)::before { background: var(--j4); }
+.gauge-card:nth-child(5)::before { background: var(--j5); }
+.gauge-card:nth-child(6)::before { background: var(--j6); }
+.gauge-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted); font-weight: 600;
+}
+.gauge-value {
+  font-family: var(--mono); font-size: 28px; font-weight: 700;
+  line-height: 1; letter-spacing: -1px;
+  transition: color .2s;
+}
+.gauge-unit { font-size: 13px; color: var(--muted); font-weight: 400; }
+.gauge-ext {
+  font-family: var(--mono); font-size: 11px; color: var(--sub);
+  margin-top: 2px; display: flex; align-items: center; gap: 4px;
+}
+.gauge-ext-label { color: var(--muted); }
+.gauge-bar-wrap {
+  margin-top: 6px; height: 4px; background: var(--bg3);
+  border-radius: 2px; overflow: hidden;
+}
+.gauge-bar {
+  height: 100%; border-radius: 2px; transition: width .15s ease;
+  min-width: 2px;
+}
+
+/* ── CHART AREA ── */
+.chart-area {
+  flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  padding: 0 24px 14px; min-height: 0;
+}
+.chart-card {
+  background: var(--bg2); border: 1px solid var(--line); border-radius: var(--rL);
+  display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+}
+.chart-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+  background: rgba(99,102,241,.03); flex-shrink: 0;
+}
+.chart-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--sub); text-transform: uppercase;
+}
+.chart-badge {
+  font-family: var(--mono); font-size: 10px; color: var(--accent2);
+  background: rgba(99,102,241,.1); border: 1px solid var(--line2);
+  padding: 2px 8px; border-radius: 10px;
+}
+.chart-body { flex: 1; min-height: 0; }
+.chart-body > div { width: 100% !important; height: 100% !important; }
+
+/* ── FOOTER STATUS ── */
+.footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 28px; flex-shrink: 0;
+  background: var(--bg2); border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+.footer-stat { display: flex; gap: 20px; }
+.footer-stat span { display: flex; align-items: center; gap: 5px; }
+
+/* ── TOGGLE ── */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.toggle {
+  position: relative; width: 36px; height: 20px; cursor: pointer;
+}
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0; background: var(--bg4); border-radius: 10px;
+  transition: background .3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; width: 14px; height: 14px;
+  left: 3px; top: 3px; background: var(--text); border-radius: 50%;
+  transition: transform .3s;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+@media(max-width:900px) {
+  .gauge-row { grid-template-columns: repeat(3, 1fr); }
+  .chart-area { grid-template-columns: 1fr; }
+}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">DSR</div>
+      <span class="nav-title">TORQUE MONITOR</span>
+      <span class="nav-tag">M0609 · LIVE</span>
+    </div>
+    <div class="nav-right">
+      <div class="conn-pill" id="conn-pill">
+        <div class="conn-dot"></div>
+        <span id="conn-text">연결 대기</span>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-label">EXT</span>
+        <label class="toggle"><input type="checkbox" id="show-ext" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="nav-clock" id="clock">--:--:--</div>
+    </div>
+  </nav>
+
+  <!-- GAUGE CARDS -->
+  <div class="gauge-row" id="gauge-row"></div>
+
+  <!-- CHARTS -->
+  <div class="chart-area">
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Joint Torque — 시계열</span>
+        <span class="chart-badge" id="badge-jt">20 Hz</span>
+      </div>
+      <div class="chart-body"><div id="chart-jt"></div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">External Torque — 시계열</span>
+        <span class="chart-badge" id="badge-et">20 Hz</span>
+      </div>
+      <div class="chart-body"><div id="chart-et"></div></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-stat">
+      <span>📡 샘플: <b id="f-samples">0</b></span>
+      <span>⏱ 업타임: <b id="f-uptime">0s</b></span>
+      <span>🔄 주기: <b id="f-rate">--</b> ms</span>
+    </div>
+    <span>robot/dsr01/torques · Firebase Realtime DB</span>
+  </div>
+
+</div>
+
+<script type="module">
+/* ══════════════════════════════════════════
+   Firebase 설정
+══════════════════════════════════════════ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCCY5tdlAhNhhlxCwdXHOTOrnyGWGFz6hc",
+  authDomain:        "rokey-d-2-4c32a.firebaseapp.com",
+  databaseURL:       "https://rokey-d-2-4c32a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "rokey-d-2-4c32a",
+  storageBucket:     "rokey-d-2-4c32a.firebasestorage.app",
+  messagingSenderId: "97777845306",
+  appId:             "1:97777845306:web:6a3122b918c1f3651c2103"
+};
+
+let rtdb;
+try {
+  const app = initializeApp(FIREBASE_CONFIG);
+  rtdb = getDatabase(app);
+  setConn(true);
+} catch(e) {
+  setConn(false);
+  console.error(e);
+}
+
+function setConn(ok) {
+  const p = document.getElementById('conn-pill');
+  const t = document.getElementById('conn-text');
+  p.className = 'conn-pill ' + (ok ? 'ok' : 'err');
+  t.textContent = ok ? '연결됨' : '연결 실패';
+}
+
+/* ══════════════════════════════════════════
+   상수 & 상태
+══════════════════════════════════════════ */
+const JOINTS = ['J1','J2','J3','J4','J5','J6'];
+const JT_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'];
+const MAX_PTS = 200;
+let sampleCount = 0;
+let startTime = Date.now();
+let lastTs = 0;
+let lastRate = 0;
+
+/* ══════════════════════════════════════════
+   게이지 카드 생성
+══════════════════════════════════════════ */
+const gaugeRow = document.getElementById('gauge-row');
+JOINTS.forEach((name, i) => {
+  const card = document.createElement('div');
+  card.className = 'gauge-card';
+  card.innerHTML = `
+    <div class="gauge-label">${name}</div>
+    <div class="gauge-value" id="gv-${i}" style="color:${JT_COLORS[i]}">0.00 <span class="gauge-unit">Nm</span></div>
+    <div class="gauge-ext">
+      <span class="gauge-ext-label">EXT</span>
+      <span id="ge-${i}">0.00 Nm</span>
+    </div>
+    <div class="gauge-bar-wrap">
+      <div class="gauge-bar" id="gb-${i}" style="width:0%;background:${JT_COLORS[i]}"></div>
+    </div>
+  `;
+  gaugeRow.appendChild(card);
+});
+
+/* ══════════════════════════════════════════
+   차트 초기화
+══════════════════════════════════════════ */
+const PLOTLY_LAYOUT = {
+  paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+  font: { color: '#94a3b8', family: 'JetBrains Mono, monospace', size: 11 },
+  margin: { l: 50, r: 20, t: 10, b: 36 },
+  xaxis: { showgrid: true, gridcolor: 'rgba(99,102,241,.12)', zeroline: false, tickformat: '%H:%M:%S' },
+  yaxis: { showgrid: true, gridcolor: 'rgba(99,102,241,.12)', zeroline: true, zerolinecolor: 'rgba(99,102,241,.25)', title: { text: 'Nm', font: { size: 11 } } },
+  legend: { orientation: 'h', x: 0, y: 1.12, font: { size: 10 } },
+  showlegend: true,
+};
+
+function makeTraces(prefix) {
+  return JOINTS.map((name, i) => ({
+    x: [], y: [],
+    name: name,
+    mode: 'lines',
+    line: { color: JT_COLORS[i], width: 2, shape: 'spline' },
+    hovertemplate: `${name}: %{y:.2f} Nm<extra></extra>`,
+  }));
+}
+
+const jtTraces = makeTraces('jt');
+const etTraces = makeTraces('et');
+
+Plotly.newPlot('chart-jt', jtTraces, {...PLOTLY_LAYOUT}, { responsive: true, displayModeBar: false });
+Plotly.newPlot('chart-et', etTraces, {...PLOTLY_LAYOUT}, { responsive: true, displayModeBar: false });
+
+/* ══════════════════════════════════════════
+   시계
+══════════════════════════════════════════ */
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('ko-KR', { hour12: false });
+}, 1000);
+
+/* ══════════════════════════════════════════
+   Firebase 실시간 리스너
+══════════════════════════════════════════ */
+let dataWd = null;
+function resetDataWd() {
+  setConn(true);
+  clearTimeout(dataWd);
+  dataWd = setTimeout(() => setConn(false), 5000);
+}
+
+onValue(ref(rtdb, 'robot/dsr01/torques'), (snap) => {
+  const d = snap.val();
+  if (!d) return;
+  resetDataWd();
+
+  const now = new Date(d.timestamp || Date.now());
+  sampleCount++;
+
+  // 주기 계산
+  if (lastTs > 0) lastRate = d.timestamp - lastTs;
+  lastTs = d.timestamp || Date.now();
+
+  // Joint Torque 값 (jt1~jt6) — 기존 j1~j6 호환
+  const jt = [];
+  for (let i = 1; i <= 6; i++) {
+    jt.push(d['jt'+i] ?? d['j'+i] ?? 0);
+  }
+
+  // External Torque 값 (et1~et6)
+  const et = [];
+  for (let i = 1; i <= 6; i++) {
+    et.push(d['et'+i] ?? 0);
+  }
+
+  // 게이지 카드 업데이트
+  const maxJt = Math.max(...jt.map(Math.abs), 1);
+  jt.forEach((v, i) => {
+    document.getElementById('gv-'+i).innerHTML = `${v.toFixed(2)} <span class="gauge-unit">Nm</span>`;
+    document.getElementById('ge-'+i).textContent = `${et[i].toFixed(2)} Nm`;
+    const pct = Math.min(Math.abs(v) / 100 * 100, 100);
+    document.getElementById('gb-'+i).style.width = pct + '%';
+  });
+
+  // 차트 업데이트
+  const jtUpdate = { x: [], y: [] };
+  const etUpdate = { x: [], y: [] };
+  for (let i = 0; i < 6; i++) {
+    jtUpdate.x.push([now]);
+    jtUpdate.y.push([jt[i]]);
+    etUpdate.x.push([now]);
+    etUpdate.y.push([et[i]]);
+  }
+
+  Plotly.extendTraces('chart-jt', jtUpdate, [0,1,2,3,4,5], MAX_PTS);
+  Plotly.extendTraces('chart-et', etUpdate, [0,1,2,3,4,5], MAX_PTS);
+
+  // 푸터 업데이트
+  document.getElementById('f-samples').textContent = sampleCount;
+  const up = Math.floor((Date.now() - startTime) / 1000);
+  const min = Math.floor(up / 60);
+  const sec = up % 60;
+  document.getElementById('f-uptime').textContent = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+  document.getElementById('f-rate').textContent = lastRate > 0 ? lastRate : '--';
+});
+
+/* ══════════════════════════════════════════
+   EXT 토글
+══════════════════════════════════════════ */
+document.getElementById('show-ext').addEventListener('change', (e) => {
+  document.querySelectorAll('.gauge-ext').forEach(el => {
+    el.style.display = e.target.checked ? 'flex' : 'none';
+  });
+});
+
+/* ══════════════════════════════════════════
+   반응형 차트 리사이즈
+══════════════════════════════════════════ */
+const ro = new ResizeObserver(() => {
+  Plotly.Plots.resize('chart-jt');
+  Plotly.Plots.resize('chart-et');
+});
+document.querySelectorAll('.chart-body').forEach(el => ro.observe(el));
+</script>
+</body>
+</html>
